@@ -24,7 +24,6 @@ metadata {
         capability "Battery"
         capability "Valve"
 
-        attribute "battery_display", "string"
         attribute "icon", "string"
         attribute "id", "string"
         attribute "is_connected", "enum", ['true','false']
@@ -33,7 +32,7 @@ metadata {
         attribute "name","string"
         attribute "next_start_programs", "string"
         attribute "next_start_time", "string"
-        attribute "presetRuntime", "number"
+        attribute "preset_runtime", "number"
         attribute "programs", "string"
         attribute "rain_icon", "string"
         attribute "rain_delay", "string"
@@ -42,12 +41,9 @@ metadata {
         attribute "sprinkler_type", "string"
         attribute "start_times", "string"
         attribute "station", "string"
-        attribute "statusText", "string"
         attribute "scheduled_auto_on", "enum", ['true','false']
         attribute "type", "string"
         attribute "water_volume_gal", "number"
-
-        command "setLevel"
     }
 }
 
@@ -61,7 +57,7 @@ def installed() {
 
 def open() {
     if (device.latestValue('scheduled_auto_on')=='true') {
-        parent.sendRequest('open', device.latestValue('id'), device.latestValue('station'),device.latestValue('presetRuntime') )
+        parent.sendRequest('open', device.latestValue('id'), device.latestValue('station'),device.latestValue('preset_runtime') )
     } else {
         def message =  "Orbit device requested to manually OPEN but scheduled_auto_on = false, ignorning request"
         log.warn message
@@ -70,11 +66,5 @@ def open() {
 }
 
 def close() {
-    parent.sendRequest('close', device.latestValue('id'), device.latestValue('station'),device.latestValue('presetRuntime') )
-}
-
-def setLevel(level, rate = null) {
-    def presetRuntimeOrbit = device.latestValue("presetRuntime")
-    log.error "Orbit B•Hyve™ Sprinkler Timer Device Preset RunTime was ${device.latestValue("manual_preset_runtime_min")} and was asked change to a new preset RunTime of ${level}.  Orbit reports it is ${presetRuntimeOrbit}... reseting to Orbit value."
-    sendEvent(name: "manual_preset_runtime_min", value: presetRuntimeOrbit, display: false)
+    parent.sendRequest('close', device.latestValue('id'), device.latestValue('station'),device.latestValue('preset_runtime') )
 }

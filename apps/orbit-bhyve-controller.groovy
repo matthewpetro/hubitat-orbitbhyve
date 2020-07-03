@@ -156,10 +156,10 @@ def initialize() {
     add_bhyve_ChildDevice()
     setScheduler(schedulerFreq)
     if (eventsToNotify) {
-    if (eventsToNotify.contains('valve')) 		{subscribe(app.getChildDevices(), "valve", valveHandler)}
-    if (eventsToNotify.contains('battery')) 	{subscribe(app.getChildDevices(), "battery", batteryHandler)}
-    if (eventsToNotify.contains('rain')) 		{subscribe(app.getChildDevices(), "rain_delay", rain_delayHandler)}
-    if (eventsToNotify.contains('connected')) 	{subscribe(app.getChildDevices(), "is_connected", is_connectedHandler)}
+        if (eventsToNotify.contains('valve')) 		{subscribe(app.getChildDevices(), "valve", valveHandler)}
+        if (eventsToNotify.contains('battery')) 	{subscribe(app.getChildDevices(), "battery", batteryHandler)}
+        if (eventsToNotify.contains('rain')) 		{subscribe(app.getChildDevices(), "rain_delay", rain_delayHandler)}
+        if (eventsToNotify.contains('connected')) 	{subscribe(app.getChildDevices(), "is_connected", is_connectedHandler)}
     }
     runIn(5, main)
 }
@@ -176,58 +176,6 @@ def installed() {
 
 def uninstalled() {
     remove_bhyve_ChildDevice()
-}
-
-
-def webEvent() {
-    Random random = new Random()
-    def data = request.JSON
-    if (data.containsKey("event")) {
-        debugVerbose "=> webEvent #${random.nextInt(1000)}: '${data.event}'-> data : ${data}"
-        switch(data.event) {
-            case 'updatealldevices':
-                runIn(5, "updateTiles", [data: data.webdata])
-                break
-            case 'change_mode':
-                if (!data.containsKey("mode")) return
-                def station = data.containsKey('stations')?data.stations.station:1
-                def d = getChildDevice(DTHDNI("${data.device_id}:${station}"))
-                if (d) {
-                    d.sendEvent(name:"run_mode", value: data.mode, displayed: false)
-                }
-                break
-            case 'low_battery':
-                if (eventsToNotify.contains('battery')) {
-                    send_message("Check your Orbit watering device for a low battery condition")
-                }
-                break
-            case 'flow_sensor_state_changed':
-                def station = data.containsKey('stations')?data.stations.station:1
-                def d = getChildDevice(DTHDNI("${data.device_id}:${station}"))
-                if (d) {
-                    def cycle_volume_gal = data.cycle_volume_gal?:null
-                    if (cycle_volume_gal) {
-                        d.sendEvent(name:"water_volume_gal", value: cycle_volume_gal, descriptionText:"${cycle_volume_gal} gallons")
-                    }
-                } else 
-                    log.error "Error in obtaining the DTHDNI from 'flow_sensor_state_changed' webevent"
-                break
-            case 'program_changed':
-                runIn(15, "refresh")
-                break
-            case 'watering_events':
-            case 'watering_in_progress_notification':
-            case 'watering_complete':
-                runIn(5, "refresh")
-                break
-            case 'status':
-                return allDeviceStatus()
-                break
-            default:
-                debugVerbose "Skipping WebEvent ${data.event}"
-                break
-        }
-    }
 }
 
 def allDeviceStatus() {
@@ -333,20 +281,20 @@ def updateTiles(data) {
             d = getChildDevice("${DTHDNI(it.id)}:${station}")
             if (d) {
                 // sendEvents calculated values for all device types
-                d.sendEvent(name:"schedulerFreq", 	value: schedulerFreq, 						displayed: false)
+                d.sendEvent(name:"schedulerFreq", 	value: schedulerFreq)
                 // sendEvents for selected fields of the data record
 
-                d.sendEvent(name:"lastupdate", 		value: "Station ${station} last connected at\n${convertDateTime(it.last_connected_at)}", displayed: false)
-                d.sendEvent(name:"name", 			value: it.name, 							displayed: false)
-                d.sendEvent(name:"type", 			value: it.type, 							displayed: false)
-                d.sendEvent(name:"id",	 			value: it.id, 								displayed: false)
-                d.sendEvent(name:"is_connected", 	value: it.is_connected, 					displayed: false)
-                d.sendEvent(name:"icon",		 	value: it.num_stations, 					displayed: false)
+                d.sendEvent(name:"lastupdate", 		value: "Station ${station} last connected at\n${convertDateTime(it.last_connected_at)}")
+                d.sendEvent(name:"name", 			value: it.name)
+                d.sendEvent(name:"type", 			value: it.type)
+                d.sendEvent(name:"id",	 			value: it.id)
+                d.sendEvent(name:"is_connected", 	value: it.is_connected)
+                d.sendEvent(name:"icon",		 	value: it.num_stations)
 
                 // Check for Orbit WiFi bridge
                 if (deviceType == 'bridge') {
-                    d.sendEvent(name:"firmware_version", value: it?.firmware_version, displayed: false)
-                    d.sendEvent(name:"hardware_version", value: it?.hardware_version, displayed: false)
+                    d.sendEvent(name:"firmware_version", value: it?.firmware_version)
+                    d.sendEvent(name:"hardware_version", value: it?.hardware_version)
                     return
                 }
 
@@ -361,24 +309,21 @@ def updateTiles(data) {
                     def byhveValveState = it.status.watering_status?"open":"closed"
                     d.sendEvent(name:"valve", 						value: byhveValveState )
 					def presetWateringInt = (it.manual_preset_runtime_sec.toInteger()/60)
-                    d.sendEvent(name:"presetRuntime", 				value: presetWateringInt, displayed: false )
-                    d.sendEvent(name:"manual_preset_runtime_min", 	value: presetWateringInt, displayed: false )
-                    d.sendEvent(name:"rain_delay", 					value: it.status.rain_delay )
-                    d.sendEvent(name:"run_mode", 					value: it.status.run_mode, displayed: false)
-                    d.sendEvent(name:"station", 					value: station, displayed: false)
+                    d.sendEvent(name:"preset_runtime", value: presetWateringInt)
+                    d.sendEvent(name:"manual_preset_runtime_min", 	value: presetWateringInt)
+                    d.sendEvent(name:"rain_delay", 					value: it.status.rain_delay)
+                    d.sendEvent(name:"run_mode", 					value: it.status.run_mode)
+                    d.sendEvent(name:"station", 					value: station)
 
                     next_start_programs = it.status.next_start_programs?it.status.next_start_programs.join(', ').toUpperCase():''
-                    d.sendEvent(name:"next_start_programs", value: "Station ${station}: ${next_start_programs}", displayed: false)
+                    d.sendEvent(name:"next_start_programs", value: "Station ${station}: ${next_start_programs}")
 
-                    d.sendEvent(name:"sprinkler_type", 		value: "${zoneData.num_sprinklers>0?:'Unknown'} ${zoneData.sprinkler_type?zoneData.sprinkler_type+'(s)':''} ", displayed: false)
+                    d.sendEvent(name:"sprinkler_type", 		value: "${zoneData.num_sprinklers>0?:'Unknown'} ${zoneData.sprinkler_type?zoneData.sprinkler_type+'(s)':''} ")
 
-                    if (it.containsKey('battery') && it.battery != null) {
-                        d.sendEvent(name:"battery", 			value: it.battery.percent, displayed:false )
-                        d.sendEvent(name:"battery_display", 	value: (Math.round(it.battery.percent.toInteger()/10.0) * 10).toString(), displayed:false )
-                    } else {
-                        d.sendEvent(name:"battery", 			value: 100   , displayed:false )
-                        d.sendEvent(name:"battery_display", 	value: "100" , displayed:false )
-                    }
+                    if (it.containsKey('battery') && it.battery != null) 
+                        d.sendEvent(name:"battery", value: it.battery.percent)
+                     else
+                        d.sendEvent(name:"battery", value: 100)
 
                     // Check for System On/Off Mode for this device
                     if (it.scheduled_modes.containsKey('auto') && it.scheduled_modes.containsKey('off')) {
@@ -388,20 +333,20 @@ def updateTiles(data) {
                         def begOffAtDate 	= it.scheduled_modes.off.at?Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",it.scheduled_modes.off.at).format(dateFormat):''
                         if (!(begAutoAtDate<=todayDate && begOffAtDate>=todayDate)) {
                             scheduled_auto_on = false
-                            d.sendEvent(name:"rain_icon", 		value: "sun", displayed: false )
-                            d.sendEvent(name:"next_start_time", value: "System Auto Off Mode", displayed: false)
+                            d.sendEvent(name:"rain_icon", 		value: "sun")
+                            d.sendEvent(name:"next_start_time", value: "System Auto Off Mode")
                         }
                     }
-                    d.sendEvent(name:"scheduled_auto_on", value: scheduled_auto_on, displayed: false )
+                    d.sendEvent(name:"scheduled_auto_on", value: scheduled_auto_on)
                     if (scheduled_auto_on) {
                         if (it.status.rain_delay > 0) {
-                            d.sendEvent(name:"rain_icon", 			value: "rain", displayed: false )
+                            d.sendEvent(name:"rain_icon", 			value: "rain")
                             def rainDelayDT = Date.parse("yyyy-MM-dd'T'HH:mm:ssX",it.status.next_start_time).format("yyyy-MM-dd'T'HH:mm:ssX", location.timeZone)
-                            d.sendEvent(name:"next_start_time", value: durationFromNow(rainDelayDT), displayed: false)
+                            d.sendEvent(name:"next_start_time", value: durationFromNow(rainDelayDT))
                         } else {
-                            d.sendEvent(name:"rain_icon", 		value: "sun", displayed: false )
+                            d.sendEvent(name:"rain_icon", 		value: "sun")
                             def next_start_time_local = Date.parse("yyyy-MM-dd'T'HH:mm:ssX",it.status.next_start_time).format("yyyy-MM-dd'T'HH:mm:ssX", location.timeZone)
-                            d.sendEvent(name:"next_start_time", value: durationFromNow(next_start_time_local), displayed: false)
+                            d.sendEvent(name:"next_start_time", value: durationFromNow(next_start_time_local))
                         }
                     }
 
@@ -445,13 +390,13 @@ def updateTiles(data) {
                                     break
                                 }
                                 msgList << "${it.name} (${it.program.toUpperCase()}): ${y.run_time[0]} mins ${freqMsg} at ${start_timesList.join(' & ')}"
-                                d.sendEvent(name:"start_times", value: "${start_timesList.join(' & ')}", displayed: false)
+                                d.sendEvent(name:"start_times", value: "${start_timesList.join(' & ')}")
                             }
                         }
                         if (msgList.size()>0) {
-                            d.sendEvent(name:"programs", value: "${zoneData.name} Programs\n${msgList.join(',\n')}", displayed: false)
+                            d.sendEvent(name:"programs", value: "${zoneData.name} Programs\n${msgList.join(',\n')}")
                         } else {
-                            d.sendEvent(name:"programs", value: "${zoneData.name} Programs\n${it.name}: None", displayed: false)
+                            d.sendEvent(name:"programs", value: "${zoneData.name} Programs\n${it.name}: None")
                         }
                     }
                     // Watering Events
@@ -467,12 +412,12 @@ def updateTiles(data) {
                             wateringTimeLeft = durationFromNow(it.status.next_start_time, "minutes")
                             d.sendEvent(name:"level", value: wateringTimeLeft, descriptionText: "${wateringTimeLeft} minutes left till end" )
                         } else {
-                            d.sendEvent(name:"water_volume_gal"	, value: 0, descriptionText:"gallons", displayed: false )
-                            d.sendEvent(name:"level"			, value: watering_events?.irrigation?.run_time, displayed: false)
+                            d.sendEvent(name:"water_volume_gal"	, value: 0, descriptionText:"gallons")
+                            d.sendEvent(name:"level"			, value: watering_events?.irrigation?.run_time)
                         }
                     } else {
-                        d.sendEvent(name:"water_volume_gal"	, value: 0, descriptionText:"gallons", displayed: false )
-                        d.sendEvent(name:"level"			, value: 0, displayed: false)
+                        d.sendEvent(name:"water_volume_gal"	, value: 0, descriptionText:"gallons")
+                        d.sendEvent(name:"level"			, value: 0)
                     }
                 }
             } else
