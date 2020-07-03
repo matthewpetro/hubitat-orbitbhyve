@@ -51,15 +51,24 @@ def uninstalled() {
     unschedule()
 }
 
+def safeWSSend(obj) {
+    if (state.webSocketOpen == false) {
+        log.error "Reconnecting to Web Socket"
+        interfaces.webSocket.connect(wsHost)
+    }
+    interfaces.webSocket.sendMessage(new JsonOutput().toJson(obj))
+}
+
 def initialize() {
+    log.debug "Connecting to Web Socket"
     interfaces.webSocket.connect(wsHost)
     pauseExecution(5000)
     def loginMsg = [
         event: "app_connection",
         orbit_session_token: parent.getApiToken()
     ]
-    interfaces.webSocket.sendMessage(new JsonOutput().toJson(loginMsg))
-    schedule("0/30 * * * * ? *", pingWebSocket)
+    safeWSSend(loginMsg)
+    
 }
 
 def parse(String message) {
@@ -67,6 +76,15 @@ def parse(String message) {
 }
 
 def webSocketStatus(String message) {
+    if (message == "status: open") {
+        schedule("0/30 * * * * ? *", pingWebSocket)
+        state.webSocketOpen = true
+    }
+    else if (message == "status: closing") {
+        log.error "Lost connection to Web Socket: ${message}"
+        unschedule()
+        state.webSocketOpen = false
+    }
     log.debug "web socket status: ${message}"
 }
 
@@ -89,14 +107,12 @@ def sendWSMessage(valveState,device_id,zone,run_time) {
     else {
         msg.stations = []
     }
-    log.debug new JsonOutput().toJson(msg)
-    interfaces.webSocket.sendMessage(new JsonOutput().toJson(msg))
+    safeWSSend(msg)
 }
 
 def pingWebSocket() {
     def pingMsg = [ event: "ping"]
-    log.debug "sending ping"
-    interfaces.webSocket.sendMessage(new JsonOutput().toJson(pingMsg))
+    safeWSSend(pingMsg)
 }
 
 def getTimestamp() {
