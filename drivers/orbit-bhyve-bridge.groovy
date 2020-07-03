@@ -18,11 +18,17 @@ def version() { return ["V4.01", "Requires Bhyve Orbit Controller"] }
 import groovy.time.*
 import java.text.DecimalFormat
 import java.text.SimpleDateFormat
+import groovy.transform.Field
+import groovy.json.JsonOutput
+
+@Field String wsHost = "wss://api.orbitbhyve.com/v1/events"
+@Field String timeStampFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
 
 metadata {
     definition (name: "Orbit Bhyve Bridge", namespace: "kurtsanders", author: "kurt@kurtsanders.com") {
         capability "Refresh"
         capability "Sensor"
+        capability "Initialize"
 
         attribute "is_connected", "enum", ['true','false']
         attribute "id", "string"
@@ -39,4 +45,61 @@ metadata {
 
 def refresh() {
     parent.refresh()
+}
+
+def uninstalled() {
+    unschedule()
+}
+
+def initialize() {
+    interfaces.webSocket.connect(wsHost)
+    pauseExecution(5000)
+    def loginMsg = [
+        event: "app_connection",
+        orbit_session_token: parent.getApiToken()
+    ]
+    interfaces.webSocket.sendMessage(new JsonOutput().toJson(loginMsg))
+    schedule("0/30 * * * * ? *", pingWebSocket)
+}
+
+def parse(String message) {
+    log.debug "web socket message ${message}"
+}
+
+def webSocketStatus(String message) {
+    log.debug "web socket status: ${message}"
+}
+
+def sendWSMessage(valveState,device_id,zone,run_time) {
+    def msg = [
+        event: "change_mode",
+        mode: "manual",
+        device_id: device_id,
+        timestamp: getTimestamp()
+    ]
+
+    if (valveState == "open") {
+        msg.stations = [
+            [
+                station: zone.toInteger(),
+                run_time: run_time
+            ]
+        ]
+    }
+    else {
+        msg.stations = []
+    }
+    log.debug new JsonOutput().toJson(msg)
+    interfaces.webSocket.sendMessage(new JsonOutput().toJson(msg))
+}
+
+def pingWebSocket() {
+    def pingMsg = [ event: "ping"]
+    log.debug "sending ping"
+    interfaces.webSocket.sendMessage(new JsonOutput().toJson(pingMsg))
+}
+
+def getTimestamp() {
+    def date = new Date()
+    return date.format(timeStampFormat, TimeZone.getTimeZone('UTC'))
 }

@@ -77,5 +77,4 @@ def setLevel(level, rate = null) {
     def presetRuntimeOrbit = device.latestValue("presetRuntime")
     log.error "Orbit B•Hyve™ Sprinkler Timer Device Preset RunTime was ${device.latestValue("manual_preset_runtime_min")} and was asked change to a new preset RunTime of ${level}.  Orbit reports it is ${presetRuntimeOrbit}... reseting to Orbit value."
     sendEvent(name: "manual_preset_runtime_min", value: presetRuntimeOrbit, display: false)
-    runIn(6,clearBanner)
 }

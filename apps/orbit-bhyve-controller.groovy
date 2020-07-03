@@ -251,65 +251,34 @@ def allDeviceStatus() {
     return JsonOutput.toJson(results)
 }
 
-def sendRequest(valveState,device_id,zone,run_time) {
-    if (serverEnabled) {
-        def httpRequest = [
-            method:		settings.httpMethod,
-            path: 		settings.httpResource,
-            query:		[
-                'state'     : (valveState=='open')?'ON':'OFF',
-                'device_id' : device_id,
-                'zone'      : zone,
-                'run_time'  : run_time
-            ],
-            headers:	[
-                HOST:		httpServerIP,
-                Accept: 	"*/*",
-            ]
-        ]
-        runIn(10, "main")
-        def hubAction = new hubitat.device.HubAction(httpRequest)
-        sendHubCommand(hubAction)
-    } else {
-        runIn(1, "main")
+def findMasterHub() {
+    return getChildDevices().find { 
+        it.latestValue("type") == "bridge"
     }
 }
 
-def makeHtmlColor(data,color='red') {
-    return "<font color='${color}'>${data}</font>"
+def sendRequest(valveState, device_id, zone, run_time) {
+    def bhyveHub = findMasterHub()
+    log.debug bhyveHub
+    bhyveHub.sendWSMessage(valveState, device_id, zone, run_time)
+    runIn(10, "main")
 }
 
 def valveHandler(evt) {
-    if (evt.isStateChange()) {
-        def msgData = []
-        msgData.add("The ${evt.linkText} ${evt.name} is now ${evt.value.toUpperCase()} at ${timestamp()}")
-        msgData.add("The ${makeHtmlColor(evt.linkText)} ${makeHtmlColor(evt.name,'green')} is now ${makeHtmlColor(evt.value.toUpperCase())} at ${timestamp()}")
-        send_message(msgData)
-    }
+    if (evt.isStateChange())
+        send_message("The ${evt.linkText} ${evt.name} is now ${evt.value.toUpperCase()} at ${timestamp()}")
 }
 def rain_delayHandler(evt) {
-    if (evt.isStateChange()) {
-        def msgData = []
-        msgData.add("The ${evt.linkText}'s rain delay is now ${evt.value} hours at ${timestamp()}")
-        msgData.add("The ${makeHtmlColor(evt.linkText)} ${makeHtmlColor(evt.name,'green')} is now ${makeHtmlColor(evt.value.toUpperCase())} hours at ${timestamp()}")
-        send_message(msgData)
-    }
+    if (evt.isStateChange())
+        send_message("The ${evt.linkText}'s rain delay is now ${evt.value} hours at ${timestamp()}")
 }
 def batteryHandler(evt) {
-    if (evt.isStateChange() && (evt.value.toInteger() <= 40) ) {
-        def msgData = []
-        msgData.add("The ${evt.linkText}'s battery is now at ${evt.value}% at ${timestamp()}")
-        msgData.add("The ${makeHtmlColor(evt.linkText)} ${makeHtmlColor(evt.name,'green')} is now at ${makeHtmlColor(evt.value.toUpperCase())}% at ${timestamp()}")
-        send_message(msgData)
-    }
+    if (evt.isStateChange() && (evt.value.toInteger() <= 40) ) 
+        send_message("The ${evt.linkText}'s battery is now at ${evt.value}% at ${timestamp()}")
 }
 def is_connectedHandler(evt) {
-    if (evt.isStateChange()) {
-        def msgData = []
-        msgData.add("The ${evt.linkText}'s WiFi Online Status is now ${evt.value?'Online':'Offline'} at ${timestamp()}")
-        msgData.add("The ${makeHtmlColor(evt.linkText)} WiFi ${makeHtmlColor(evt.name,'green')} is now ${makeHtmlColor(evt.value?'Online':'Offline')} at ${timestamp()}")
-        send_message(msgData)
-    }
+    if (evt.isStateChange())
+        send_message("The ${evt.linkText}'s WiFi Online Status is now ${evt.value?'Online':'Offline'} at ${timestamp()}")
 }
 
 def refresh() {
@@ -843,3 +812,7 @@ def send_message(ArrayList msgData) {
         notificationDevices*.deviceNotification(msgData[1])
 }
 
+// ======= WebSocket Helper Methods =======
+def getApiToken() {
+    return state.orbit_api_key
+}
