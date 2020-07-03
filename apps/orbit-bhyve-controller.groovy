@@ -19,6 +19,9 @@ import groovy.time.*
 import java.text.SimpleDateFormat
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
+import groovy.transform.Field
+
+@Field String apiUrl = "https://api.orbitbhyve.com/v1/"
 
 definition(
     name: 		"Orbit Bhyve Controller",
@@ -46,11 +49,7 @@ def mainMenu() {
         orbitBhyveLoginOK = OrbitBhyveLogin()
         def respdata = orbitBhyveLoginOK ? OrbitGet("devices") : null
     }
-    dynamicPage(name: "mainMenu",
-                title: "Orbit B•Hyve™ Timer Account Login Information",
-                nextPage: orbitBhyveLoginOK ? "mainOptions" : null,
-                install: false,
-                uninstall: true)
+    dynamicPage(name: "mainMenu", title: "Orbit B•Hyve™ Timer Account Login Information", nextPage: orbitBhyveLoginOK ? "mainOptions" : null, install: false, uninstall: true)
     {
         if (username && password) {
             if (state?.orbit_api_key) {
@@ -64,36 +63,18 @@ def mainMenu() {
                 }
             }
         }
-        section () {
-            input ( name    : "username",
-                   type     : "text",
-                   title    : "Account userid?",
-                   submitOnChange: true,
-                 required : true
-                  )
-            input ( name    : "password",
-                   type     : "password",
-                   title    : "Account password?",
-                   submitOnChange: true,
-                   required : true
-                  )
+        section {
+            input name: "username", type: "text", title: "Username", required: true, submitOnChange: true
+            input name: "password", type: "password", title: "Password", required: true, submitOnChange: true
         }
     }
 }
 
 def mainOptions() {
-    dynamicPage(name: "mainOptions",
-                title: "Bhyve Timer Controller Options",
-                install: true,
-                uninstall: false)
+    dynamicPage(name: "mainOptions", title: "Bhyve Timer Controller Options", install: true, uninstall: false)
     {
         section("Orbit Timer Refresh/Polling Update Interval") {
-            input ( name: "schedulerFreq",
-                   type: "enum",
-                   title: "Run Bhyve Refresh Every (X mins)?",
-                   options: ['0':'Off','1':'1 min','2':'2 mins','3':'3 mins','4':'4 mins','5':'5 mins','10':'10 mins','15':'15 mins','30':'Every ½ Hour','60':'Every Hour','180':'Every 3 Hours'],
-                   required: true
-                  )
+            input name: "schedulerFreq", type: "enum", title: "Run Bhyve Refresh Every (X mins)?", required: true, options: ['0':'Off','1':'1 min','2':'2 mins','3':'3 mins','4':'4 mins','5':'5 mins','10':'10 mins','15':'15 mins','30':'Every ½ Hour','60':'Every Hour','180':'Every 3 Hours']
         }
         section("Push Notification Options") {
             href(name: "Push Notification Options",
@@ -102,52 +83,24 @@ def mainOptions() {
                  description: "Notification Options",
                  defaultValue: "Tap to Select Notification Options")
         }
-
-        section() {
-            label ( name: "name",
-                   title: "App Name",
-                   state: (name ? "complete" : null),
-                   defaultValue: "${app.name}",
-                   required: false
-                  )
-        }
         section(hideable: true, hidden: true, "Logging Settings") {
-            input ( name: "logDebugMsgs", type: "bool",
-                   title: "Show Debug Messages in IDE",
-                   description: "Verbose Mode",
-                   required: false
-                  )
-            input ( name: "logInfoMsgs", type: "bool",
-                   title: "Show Info Messages in IDE",
-                   description: "Verbose Mode",
-                   required: false
-                  )
+            input name: "logDebugMsgs", type: "bool", title: "Log debug messages"
+            input name: "logInfoMsgs", type: "bool", title: "Log info messages"
         }
     }
 }
 
 def notificationOptions() {
-    dynamicPage(name: "notificationOptions",
-                title: "Bhyve Timer Controller Notification Options",
-                install: false,
-                uninstall: false)
+    dynamicPage(name: "notificationOptions", title: "Bhyve Timer Controller Notification Options", install: false, uninstall: false)
     {
         section("Enable Notifications:") {
-            input ("notificationsEnabled", "bool", title: "Use Notifications", required: false, submitOnChange: true)
+            input "notificationsEnabled", "bool", title: "Use Notifications", required: false, submitOnChange: true
             if (notificationsEnabled)
                 input "notificationDevices", "capability.notification", description: "Device(s) to notify", multiple: true, required: notificationsEnabled
         }
 
         section("Event Notification Filtering") {
-            input ( name	: "eventsToNotify",
-                   type		: "enum",
-                   title	: "Which Events",
-                   options: ['battery':'Battery Low','connected':'Online/Offline','rain':'Rain Delay','valve':'Valve Open/Close'],
-                   description: "Select Events to Notify",
-                   required: false,
-                   multiple: true
-                  )
-
+            input name: "eventsToNotify", type: "enum", title: "Which Events", multiple: true, options: ['battery':'Battery Low','connected':'Online/Offline','rain':'Rain Delay','valve':'Valve Open/Close']
         }
     }
 }
@@ -170,7 +123,6 @@ def updated() {
 }
 
 def installed() {
-    state?.isInstalled = true
     initialize()
 }
 
@@ -180,7 +132,7 @@ def uninstalled() {
 
 def allDeviceStatus() {
     def results = [:]
-    app.getChildDevices().each{
+    app.getChildDevices().each {
         def d = getChildDevice(it.deviceNetworkId)
         def type = d.latestValue('type')
         if (!results.containsKey(type)) {
@@ -188,14 +140,14 @@ def allDeviceStatus() {
         }
         results[type].add(
             [
-                name 						: it.name,
-                type 						: it.typeName,
-                valve						: d.latestValue('valve'),
-                id							: d.latestValue('id'),
-                manual_preset_runtime_min	: d.latestValue('manual_preset_runtime_min')
+                name: it.name,
+                type: it.typeName,
+                valve: d.latestValue('valve'),
+                id: d.latestValue('id'),
+                manual_preset_runtime_min: d.latestValue('manual_preset_runtime_min')
             ]
         )
-        }
+    }
     return JsonOutput.toJson(results)
 }
 
@@ -239,7 +191,8 @@ def main() {
     def data = OrbitGet("devices")
     if (data) {
         updateTiles(data)
-    } else 
+    } 
+    else 
         log.error "OrbitGet(devices): No data returned, Critical Error: Exit"
 }
 
@@ -284,13 +237,11 @@ def updateTiles(data) {
                 d.sendEvent(name:"schedulerFreq", 	value: schedulerFreq)
                 // sendEvents for selected fields of the data record
 
-                d.sendEvent(name:"lastupdate", 		value: "Station ${station} last connected at\n${convertDateTime(it.last_connected_at)}")
-                d.sendEvent(name:"name", 			value: it.name)
-                d.sendEvent(name:"type", 			value: it.type)
-                d.sendEvent(name:"id",	 			value: it.id)
-                d.sendEvent(name:"is_connected", 	value: it.is_connected)
-                d.sendEvent(name:"icon",		 	value: it.num_stations)
-
+                d.sendEvent(name:"lastupdate", value: "Station ${station} last connected at\n${convertDateTime(it.last_connected_at)}")
+                d.sendEvent(name:"name", value: it.name)
+                d.sendEvent(name:"type", value: it.type)
+                d.sendEvent(name:"id", value: it.id)
+                d.sendEvent(name:"is_connected",value: it.is_connected)
                 // Check for Orbit WiFi bridge
                 if (deviceType == 'bridge') {
                     d.sendEvent(name:"firmware_version", value: it?.firmware_version)
@@ -300,51 +251,52 @@ def updateTiles(data) {
 
                 // Check for Orbit sprinkler_timer device
                 if (deviceType == 'sprinkler_timer') {
-                    zoneData 	= it.zones[i]
-                    station 	= zoneData.station
-                    scheduled_auto_on 	= true
+                    zoneData = it.zones[i]
+                    station = zoneData.station
+                    scheduled_auto_on = true
                     d = getChildDevice("${DTHDNI(it.id)}:${station}")
                     infoVerbose "Procesing Orbit Sprinkler Device: '${it.name}', Orbit Station #${station}, Zone Name: '${zoneData.name}'"
 
                     def byhveValveState = it.status.watering_status?"open":"closed"
-                    d.sendEvent(name:"valve", 						value: byhveValveState )
-					def presetWateringInt = (it.manual_preset_runtime_sec.toInteger()/60)
+                    d.sendEvent(name:"valve", value: byhveValveState )
+					def presetWateringInt = it.manual_preset_runtime_sec.toInteger()/60
                     d.sendEvent(name:"preset_runtime", value: presetWateringInt)
-                    d.sendEvent(name:"manual_preset_runtime_min", 	value: presetWateringInt)
-                    d.sendEvent(name:"rain_delay", 					value: it.status.rain_delay)
-                    d.sendEvent(name:"run_mode", 					value: it.status.run_mode)
-                    d.sendEvent(name:"station", 					value: station)
+                    d.sendEvent(name:"manual_preset_runtime_min", value: presetWateringInt)
+                    d.sendEvent(name:"rain_delay", value: it.status.rain_delay)
+                    d.sendEvent(name:"run_mode", value: it.status.run_mode)
+                    d.sendEvent(name:"station", value: station)
 
                     next_start_programs = it.status.next_start_programs?it.status.next_start_programs.join(', ').toUpperCase():''
                     d.sendEvent(name:"next_start_programs", value: "Station ${station}: ${next_start_programs}")
 
-                    d.sendEvent(name:"sprinkler_type", 		value: "${zoneData.num_sprinklers>0?:'Unknown'} ${zoneData.sprinkler_type?zoneData.sprinkler_type+'(s)':''} ")
+                    d.sendEvent(name:"sprinkler_type", value: "${zoneData.num_sprinklers>0?:'Unknown'} ${zoneData.sprinkler_type?zoneData.sprinkler_type+'(s)':''} ")
 
                     if (it.containsKey('battery') && it.battery != null) 
                         d.sendEvent(name:"battery", value: it.battery.percent)
-                     else
+                    else
                         d.sendEvent(name:"battery", value: 100)
 
                     // Check for System On/Off Mode for this device
                     if (it.scheduled_modes.containsKey('auto') && it.scheduled_modes.containsKey('off')) {
                         def dateFormat = (it.scheduled_modes.auto.annually==true)?"MMdd":"YYYYMMdd"
-                        def todayDate 		= new Date().format(dateFormat, location.timeZone)
-                        def begAutoAtDate 	= it.scheduled_modes.auto.at?Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",it.scheduled_modes.auto.at).format(dateFormat):''
-                        def begOffAtDate 	= it.scheduled_modes.off.at?Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",it.scheduled_modes.off.at).format(dateFormat):''
+                        def todayDate = new Date().format(dateFormat, location.timeZone)
+                        def begAutoAtDate = it.scheduled_modes.auto.at?Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",it.scheduled_modes.auto.at).format(dateFormat):''
+                        def begOffAtDate = it.scheduled_modes.off.at?Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",it.scheduled_modes.off.at).format(dateFormat):''
                         if (!(begAutoAtDate<=todayDate && begOffAtDate>=todayDate)) {
                             scheduled_auto_on = false
-                            d.sendEvent(name:"rain_icon", 		value: "sun")
+                            d.sendEvent(name:"rain_icon", value: "sun")
                             d.sendEvent(name:"next_start_time", value: "System Auto Off Mode")
                         }
                     }
                     d.sendEvent(name:"scheduled_auto_on", value: scheduled_auto_on)
                     if (scheduled_auto_on) {
                         if (it.status.rain_delay > 0) {
-                            d.sendEvent(name:"rain_icon", 			value: "rain")
+                            d.sendEvent(name:"rain_icon", value: "rain")
                             def rainDelayDT = Date.parse("yyyy-MM-dd'T'HH:mm:ssX",it.status.next_start_time).format("yyyy-MM-dd'T'HH:mm:ssX", location.timeZone)
                             d.sendEvent(name:"next_start_time", value: durationFromNow(rainDelayDT))
-                        } else {
-                            d.sendEvent(name:"rain_icon", 		value: "sun")
+                        } 
+                        else {
+                            d.sendEvent(name:"rain_icon", value: "sun")
                             def next_start_time_local = Date.parse("yyyy-MM-dd'T'HH:mm:ssX",it.status.next_start_time).format("yyyy-MM-dd'T'HH:mm:ssX", location.timeZone)
                             d.sendEvent(name:"next_start_time", value: durationFromNow(next_start_time_local))
                         }
@@ -380,7 +332,7 @@ def updateTiles(data) {
                                         4:"Thusday",
                                         5:"Friday",
                                         6:"Saturday"]
-                                    it.frequency.days.each{
+                                    it.frequency.days.each {
                                         dow << map[it]
                                     }
                                     freqMsg = "every ${dow.join(' & ')}"
@@ -393,11 +345,10 @@ def updateTiles(data) {
                                 d.sendEvent(name:"start_times", value: "${start_timesList.join(' & ')}")
                             }
                         }
-                        if (msgList.size()>0) {
+                        if (msgList.size()>0)
                             d.sendEvent(name:"programs", value: "${zoneData.name} Programs\n${msgList.join(',\n')}")
-                        } else {
+                        else
                             d.sendEvent(name:"programs", value: "${zoneData.name} Programs\n${it.name}: None")
-                        }
                     }
                     // Watering Events
                     watering_events = OrbitGet('watering_events', it.id)[0]
@@ -411,16 +362,19 @@ def updateTiles(data) {
                             wateringTimeLeft = durationFromNow(it.status.next_start_time, "minutes")
                             wateringTimeLeft = durationFromNow(it.status.next_start_time, "minutes")
                             d.sendEvent(name:"level", value: wateringTimeLeft, descriptionText: "${wateringTimeLeft} minutes left till end" )
-                        } else {
-                            d.sendEvent(name:"water_volume_gal"	, value: 0, descriptionText:"gallons")
-                            d.sendEvent(name:"level"			, value: watering_events?.irrigation?.run_time)
+                        } 
+                        else {
+                            d.sendEvent(name:"water_volume_gal", value: 0, descriptionText:"gallons")
+                            d.sendEvent(name:"level", value: watering_events?.irrigation?.run_time)
                         }
-                    } else {
+                    } 
+                    else {
                         d.sendEvent(name:"water_volume_gal"	, value: 0, descriptionText:"gallons")
-                        d.sendEvent(name:"level"			, value: 0)
+                        d.sendEvent(name:"level", value: 0)
                     }
                 }
-            } else
+            } 
+            else
                 log.error "Invalid Orbit Device ID: '${it.id}'. If you have added a NEW bhyve device, you must rerun the SmartApp setup to create a SmartThings device"
         }
     }
@@ -438,7 +392,8 @@ def durationFromNow(dt,showOnly=null) {
             log.error "durationFromNow(): Error converting ${dt}: ${e}"
             return false
         }
-    } else {
+    } 
+    else {
         log.error "durationFromNow(): Invalid date format for ${dt}"
         return false
     }
@@ -455,13 +410,13 @@ def durationFromNow(dt,showOnly=null) {
         rc = duration
         switch (showOnly) {
             case 'minutes':
-            if (/\d+(?=\Wminutes)/) {
-            def result = (rc =~ /\d+(?=\Wminutes)/)
-                return (result[0])
-            } else {
-            return (rc.replaceAll(/\.\d+/,''))
-            }
-            break
+                if (/\d+(?=\Wminutes)/) {
+                def result = (rc =~ /\d+(?=\Wminutes)/)
+                    return (result[0])
+                } 
+                else 
+                    return (rc.replaceAll(/\.\d+/,''))
+                break
             default:
                 return (rc.replaceAll(/\.\d+/,'').split(',').length<3)?rc.replaceAll(/\.\d+/,''):(rc.replaceAll(/\.\d+/,'').split(',')[0,1].join())
 
@@ -475,26 +430,26 @@ def timestamp(type='long', mobileTZ=false) {
     Date datenow = new Date()
     switch(type){
         case 'short':
-        formatstring = 'h:mm:ss a'
-        break
+            formatstring = 'h:mm:ss a'
+            break
         default:
             formatstring = 'EEE MMM d, h:mm:ss a'
-        break
     }
     def tf = new java.text.SimpleDateFormat(formatstring)
 
-    if (mobileTZ) {
+    if (mobileTZ) 
         return datenow.format(formatstring, location.timeZone).replace("AM", "am").replace("PM","pm")
-	} else {
+	else 
         tf.setTimeZone(TimeZone.getTimeZone(state.timezone))
-    }
-        return tf.format(datenow).replace("AM", "am").replace("PM","pm")
+
+    return tf.format(datenow).replace("AM", "am").replace("PM","pm")
 }
 
 def OrbitGet(command, device_id=null, mesh_id=null) {
     def respdata
     def params = [
-        'uri'		: orbitBhyveLoginAPI(),
+        uri		: apiUrl,
+        contentType: "application/json",
         'headers'	: OrbitBhyveLoginHeaders(),
     ]
     params.headers << ["orbit-api-key"	: state.orbit_api_key]
@@ -504,12 +459,12 @@ def OrbitGet(command, device_id=null, mesh_id=null) {
             break
         case 'user_feedback':
         case 'devices':
-            params.path 	= "${command}"
-            params.query 	= ["user_id": state.user_id]
+            params.path = "${command}"
+            params.query = ["user_id": state.user_id]
             break
         case 'sprinkler_timer_programs':
-            params.path 	= "${command}"
-            params.query	= ["device_id" : device_id]
+            params.path = "${command}"
+            params.query = ["device_id" : device_id]
             break
         case 'zone_reports':
         case 'watering_events':
@@ -528,7 +483,8 @@ def OrbitGet(command, device_id=null, mesh_id=null) {
         httpGet(params) { resp ->
             if(resp.status == 200) {
                 respdata = resp.data
-            } else {
+            } 
+            else {
                 log.error "Fatal Error Status '${resp.status}' from Orbit B•Hyve™ ${command}.  Data='${resp?.data}'"
                 return null
             }
@@ -548,12 +504,20 @@ def OrbitGet(command, device_id=null, mesh_id=null) {
 
 def OrbitBhyveLogin() {
     debugVerbose "Start OrbitBhyveLogin() ============="
-    if ((username==null) || (password==null)) { return false }
+    if ((username==null) || (password==null)) 
+        return false
     def params = [
-        'uri'			: orbitBhyveLoginAPI(),
-        'headers'		: OrbitBhyveLoginHeaders(),
-        'path'			: "session",
-        'body'			: web_postdata()
+        uri: apiUrl,
+        headers: OrbitBhyveLoginHeaders(),
+        path: "session",
+        body: [
+            session: [
+                email: username,
+                password: password
+            ]
+        ],
+        requestContentType: "application/json",
+        contentType: "application/json"
     ]
     try {
         httpPost(params) {
@@ -561,15 +525,15 @@ def OrbitBhyveLogin() {
             if(resp.status == 200) {
                 debugVerbose "HttpPost Login Request was OK ${resp.status}"
                 state.orbit_api_key = "${resp.data?.orbit_api_key}"
-                state.user_id 		= "${resp.data?.user_id}"
-                state.user_name 	= "${resp.data?.user_name}"
-                state.statusText	= "Success"
+                state.user_id = "${resp.data?.user_id}"
+                state.user_name = "${resp.data?.user_name}"
+                state.statusText = "Success"
             }
             else {
                 log.error "Fatal Error Status '${resp.status}' from Orbit B•Hyve™ Login.  Data='${resp.data}'"
                 state.orbit_api_key = null
-                state.user_id 		= null
-                state.user_name 	= null
+                state.user_id = null
+                state.user_name = null
                 state.statusText = "Fatal Error Status '${resp.status}' from Orbit B•Hyve™ Login.  Data='${resp.data}'"
                 return false
             }
@@ -579,8 +543,8 @@ def OrbitBhyveLogin() {
     {
         log.error "Catch HttpPost Login Error: ${e}"
         state.orbit_api_key = null
-        state.user_id 		= null
-        state.user_name 	= null
+        state.user_id = null
+        state.user_name = null
         state.statusText = "Fatal Error for Orbit B•Hyve™ Login '${e}'"
         return false
     }
@@ -594,48 +558,43 @@ def setScheduler(schedulerFreq) {
 
     switch(schedulerFreq) {
         case '0':
-        unschedule()
-        break
+            unschedule()
+            break
         case '1':
-        runEvery1Minute(refresh)
-        break
+            runEvery1Minute(refresh)
+            break
         case '2':
-        schedule("${random(60)} 3/${schedulerFreq} * * * ?","refresh")
-        break
         case '3':
-        schedule("${random(60)} 3/${schedulerFreq} * * * ?","refresh")
-        break
         case '4':
-        schedule("${random(60)} 3/${schedulerFreq} * * * ?","refresh")
-        break
+            schedule("${random(60)} 3/${schedulerFreq} * * * ?","refresh")
+            break
         case '5':
-        runEvery5Minutes(refresh)
-        break
+            runEvery5Minutes(refresh)
+            break
         case '10':
-        runEvery10Minutes(refresh)
-        break
+            runEvery10Minutes(refresh)
+            break
         case '15':
-        runEvery15Minutes(refresh)
-        break
+            runEvery15Minutes(refresh)
+            break
         case '30':
-        runEvery30Minutes(refresh)
-        break
+            runEvery30Minutes(refresh)
+            break
         case '60':
-        runEvery1Hour(refresh)
-        break
+            runEvery1Hour(refresh)
+            break
         case '180':
-        runEvery3Hours(refresh)
-        break
+            runEvery3Hours(refresh)
+            break
         default :
-        infoVerbose("Unknown Schedule Frequency")
-        unschedule()
+            infoVerbose("Unknown Schedule Frequency")
+            unschedule()
         return
     }
-    if(schedulerFreq=='0'){
+    if(schedulerFreq=='0')
         infoVerbose("UNScheduled all RunEvery")
-    } else {
+     else
         infoVerbose("Scheduled RunEvery${schedulerFreq}Minute")
-    }
 }
 
 def random(int value=10000) {
@@ -651,34 +610,33 @@ def add_bhyve_ChildDevice() {
         respdata.eachWithIndex { it, index ->
             switch (it.type) {
                 case 'sprinkler_timer':
-                def numZones = it.zones.size()
-                infoVerbose "Orbit device (${index}): ${it.name} is a ${it.type}-${it.hardware_version} with ${it.num_stations} stations, ${numZones} zone(s) and last connected at: ${convertDateTime(it.last_connected_at)}"
-                for (i = 0 ; i < it.zones.size(); i++) {
+                    def numZones = it.zones.size()
+                    infoVerbose "Orbit device (${index}): ${it.name} is a ${it.type}-${it.hardware_version} with ${it.num_stations} stations, ${numZones} zone(s) and last connected at: ${convertDateTime(it.last_connected_at)}"
+                    for (i = 0 ; i < it.zones.size(); i++) {
+                        data = [
+                            DTHid: "${DTHDNI(it.id)}:${it.zones[i].station}",
+                            DTHname: DTHName(it.type.split(" |-|_").collect{it.capitalize()}.join(" ")),
+                            DTHlabel: "Bhyve ${it.zones[i].name?:it.name}"
+                        ]
+                        createDevice(data)
+                    }
+                    break
+                case 'bridge':
                     data = [
-                        DTHid 	: "${DTHDNI(it.id)}:${it.zones[i].station}",
-                        DTHname : DTHName(it.type.split(" |-|_").collect{it.capitalize()}.join(" ")),
-                        DTHlabel: "Bhyve ${it.zones[i].name?:it.name}"
+                        DTHid: 	"${DTHDNI(it.id)}:0",
+                        DTHname:	DTHName(it.type.split(" |-|_").collect{it.capitalize()}.join(" ")),
+                        DTHlabel: 	"Bhyve ${it.name}"
                     ]
                     createDevice(data)
-                }
-                break
-                case 'bridge':
-                data = [
-                    DTHid	: 	"${DTHDNI(it.id)}:0",
-                    DTHname	:	DTHName(it.type.split(" |-|_").collect{it.capitalize()}.join(" ")),
-                    DTHlabel: 	"Bhyve ${it.name}"
-                ]
-                createDevice(data)
-                break
+                    break
                 default:
                     log.error "Skipping: Unknown Orbit b•hyve deviceType '${it?.type}' for '${it?.name}'"
                     data = [:]
-                break
             }
         }
-    } else {
+    } 
+    else 
         return false
-    }
     return true
 }
 
@@ -687,10 +645,11 @@ def createDevice(data) {
     if (d) {
         infoVerbose "VERIFIED DTH: '${d.name}' is DNI:'${d.deviceNetworkId}'"
         return true
-    } else {
+    } 
+    else {
         infoVerbose "MISSING DTH: Creating a NEW Orbit device for '${data.DTHname}' device as '${data.DTHlabel}' with DNI: ${data.DTHid}"
         try {
-            addChildDevice(DTHnamespace(), data.DTHname, data.DTHid, null, ["name": "${data.DTHlabel}", label: "${data.DTHlabel}", completedSetup: true])
+            addChildDevice("kurtsanders", data.DTHname, data.DTHid, null, ["name": "${data.DTHlabel}", label: "${data.DTHlabel}", completedSetup: true])
         } catch(e) {
             log.error "The Device Handler '${data.DTHname}' was not found in your 'My Device Handlers', Error-> '${e}'.  Please install this DTH device in the IDE's 'My Device Handlers'"
             return false
@@ -717,14 +676,13 @@ def convertDateTime(dt) {
     def rc
     switch (dt) {
         case ~/.*UTC.*/:
-        rc = dt
-        break
+            rc = dt
+            break
         case ~/.*Z.*/:
-        rc = Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", dt)
-        break
+            rc = Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", dt)
+            break
         default:
             rc = Date.parse("yyyy-MM-dd'T'HH:mm:ssX", dt)
-        break
     }
     return rc.format('EEE MMM d, h:mm a', timezone).replace("AM", "am").replace("PM","pm")
 }
@@ -733,14 +691,10 @@ def convertDateTime(dt) {
 def debugVerbose(String message) {if (logDebugMsgs){log.debug "${message}"}}
 def infoVerbose(String message)  {if (logInfoMsgs){log.info "${message}"}}
 String DTHDNI(id) 					{(id.startsWith('bhyve'))?id:"bhyve-${app.id}-${id}"}
-String DTHnamespace()			{ return "kurtsanders" }
 String DTHName(type) 			{ return "Orbit Bhyve ${type}" }
-String orbitBhyveLoginAPI() 	{ return "https://api.orbitbhyve.com/v1/" }
-String web_postdata() 			{ return "{\n    \"session\": {\n        \"email\": \"$username\",\n        \"password\": \"$password\"\n    }\n}" }
 Map OrbitBhyveLoginHeaders() 	{
     return [
-        'orbit-app-id':'Orbit Support Dashboard',
-        'Content-Type':'application/json'
+        'orbit-app-id':'Orbit Support Dashboard'
     ]
 }
 List typelist() { return ["sprinkler_timer","bridge"] }
@@ -763,5 +717,5 @@ def getApiToken() {
 }
 
 def getDeviceById(deviceId) {
-    return getChildDevices().find { it.currentValue("id") == deviceId}
+    return getChildDevices().find { it.currentValue("id") == deviceId }
 }

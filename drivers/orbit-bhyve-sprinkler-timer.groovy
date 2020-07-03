@@ -24,7 +24,6 @@ metadata {
         capability "Battery"
         capability "Valve"
 
-        attribute "icon", "string"
         attribute "id", "string"
         attribute "is_connected", "enum", ['true','false']
         attribute "lastupdate", "string"
