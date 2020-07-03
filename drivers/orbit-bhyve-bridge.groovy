@@ -61,15 +61,18 @@ def safeWSSend(obj) {
 }
 
 def initialize() {
-    log.debug "Connecting to Web Socket"
-    interfaces.webSocket.connect(wsHost)
-    pauseExecution(5000)
-    def loginMsg = [
-        event: "app_connection",
-        orbit_session_token: parent.getApiToken()
-    ]
-    safeWSSend(loginMsg)
-    
+    if (getDataValue("master") == "true") {
+        log.debug "Connecting to Web Socket"
+        interfaces.webSocket.connect(wsHost)
+        pauseExecution(5000)
+        def loginMsg = [
+            event: "app_connection",
+            orbit_session_token: parent.getApiToken()
+        ]
+        safeWSSend(loginMsg)
+    }
+    else
+        parent.sendInitializeCommandToMasterHub()    
 }
 
 def parse(String message) {

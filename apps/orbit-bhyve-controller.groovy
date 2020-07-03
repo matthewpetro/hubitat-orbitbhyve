@@ -153,7 +153,7 @@ def allDeviceStatus() {
 
 def findMasterHub() {
     return getChildDevices().find { 
-        it.latestValue("type") == "bridge"
+        it.latestValue("type") == "bridge" && it.getDataValue("master") == "true"
     }
 }
 
@@ -627,7 +627,13 @@ def add_bhyve_ChildDevice() {
                         DTHname:	DTHName(it.type.split(" |-|_").collect{it.capitalize()}.join(" ")),
                         DTHlabel: 	"Bhyve ${it.name}"
                     ]
-                    createDevice(data)
+                    def bridge = createDevice(data)
+                    if (!findMasterHub()) {
+                        bridge.updateDataValue("master", "true")
+                        bridge.initialize()
+                    }
+                    else
+                        bridge.updateDataValue("master", "false")
                     break
                 default:
                     log.error "Skipping: Unknown Orbit b•hyve deviceType '${it?.type}' for '${it?.name}'"
@@ -644,19 +650,19 @@ def createDevice(data) {
     def d = getChildDevice(data.DTHid)
     if (d) {
         infoVerbose "VERIFIED DTH: '${d.name}' is DNI:'${d.deviceNetworkId}'"
-        return true
+        return d
     } 
     else {
         infoVerbose "MISSING DTH: Creating a NEW Orbit device for '${data.DTHname}' device as '${data.DTHlabel}' with DNI: ${data.DTHid}"
         try {
-            addChildDevice("kurtsanders", data.DTHname, data.DTHid, null, ["name": "${data.DTHlabel}", label: "${data.DTHlabel}", completedSetup: true])
-        } catch(e) {
-            log.error "The Device Handler '${data.DTHname}' was not found in your 'My Device Handlers', Error-> '${e}'.  Please install this DTH device in the IDE's 'My Device Handlers'"
-            return false
+            d = addChildDevice("kurtsanders", data.DTHname, data.DTHid, null, ["name": "${data.DTHlabel}", label: "${data.DTHlabel}", completedSetup: true])
+        } 
+        catch(e) {
+            return null
         }
         infoVerbose "Success: Added a new device named '${data.DTHlabel}' as DTH:'${data.DTHname}' with DNI:'${data.DTHid}'"
     }
-    return true
+    return d
 }
 
 def remove_bhyve_ChildDevice() {
@@ -718,4 +724,8 @@ def getApiToken() {
 
 def getDeviceById(deviceId) {
     return getChildDevices().find { it.currentValue("id") == deviceId }
+}
+
+def sendInitializeCommandToMasterHub() {
+    findMasterHub().initialize()
 }

@@ -35,7 +35,7 @@ metadata {
         attribute "programs", "string"
         attribute "rain_icon", "string"
         attribute "rain_delay", "string"
-        attribute "runmode", "enum", ["auto, manual"]
+        attribute "run_mode", "enum", ["auto, manual"]
         attribute "schedulerFreq", "string"
         attribute "sprinkler_type", "string"
         attribute "start_times", "string"
