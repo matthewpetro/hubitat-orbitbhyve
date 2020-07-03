@@ -20,6 +20,7 @@ import java.text.DecimalFormat
 import java.text.SimpleDateFormat
 import groovy.transform.Field
 import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
 
 @Field String wsHost = "wss://api.orbitbhyve.com/v1/events"
 @Field String timeStampFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
@@ -72,7 +73,40 @@ def initialize() {
 }
 
 def parse(String message) {
-    log.debug "web socket message ${message}"
+    
+    def payload = new JsonSlurper().parseText(message)
+
+    switch (payload.event) {
+        case "watering_in_progress_notification":
+            def dev = parent.getDeviceById(payload.device_id)
+            if (dev)
+                dev.sendEvent(name: "valve", value: "open")
+            break
+        case "watering_complete":
+            def dev = parent.getDeviceById(payload.device_id)
+            if (dev)
+                dev.sendEvent(name: "valve", value: "closed")
+            break
+        case "change_mode":
+            def dev = parent.getDeviceById(payload.device_id)
+            if (dev)
+                dev.sendEvent(name: "run_mode ", value: payload.mode)
+            break
+        case "rain_delay":
+            def dev = parent.getDeviceById(payload.device_id)
+            if (dev)
+                dev.sendEvent(name: "rain_delay", value: payload.delay)
+            break
+        case "program_changed":
+            // TODO figure this out
+            break
+        case "device_idle":
+        case "clear_low_battery":
+            // Do nothing
+            break
+        default:
+            log.debug "Unknown message: ${message}"
+    }
 }
 
 def webSocketStatus(String message) {

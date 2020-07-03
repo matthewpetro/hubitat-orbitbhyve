@@ -816,3 +816,7 @@ def send_message(ArrayList msgData) {
 def getApiToken() {
     return state.orbit_api_key
 }
+
+def getDeviceById(deviceId) {
+    return getChildDevices().find { it.currentValue("id") == deviceId}
+}
