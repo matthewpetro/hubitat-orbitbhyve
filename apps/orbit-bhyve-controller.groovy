@@ -159,7 +159,6 @@ def findMasterHub() {
 
 def sendRequest(valveState, device_id, zone, run_time) {
     def bhyveHub = findMasterHub()
-    log.debug bhyveHub
     bhyveHub.sendWSMessage(valveState, device_id, zone, run_time)
     runIn(10, "main")
 }
@@ -278,10 +277,10 @@ def updateTiles(data) {
 
                     // Check for System On/Off Mode for this device
                     if (it.scheduled_modes.containsKey('auto') && it.scheduled_modes.containsKey('off')) {
-                        def dateFormat = (it.scheduled_modes.auto.annually==true)?"MMdd":"YYYYMMdd"
+                        def dateFormat = (it.scheduled_modes?.auto?.annually==true)?"MMdd":"YYYYMMdd"
                         def todayDate = new Date().format(dateFormat, location.timeZone)
-                        def begAutoAtDate = it.scheduled_modes.auto.at?Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",it.scheduled_modes.auto.at).format(dateFormat):''
-                        def begOffAtDate = it.scheduled_modes.off.at?Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",it.scheduled_modes.off.at).format(dateFormat):''
+                        def begAutoAtDate = it.scheduled_modes?.auto?.at?Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",it.scheduled_modes.auto.at).format(dateFormat):''
+                        def begOffAtDate = it.scheduled_modes?.off?.at?Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",it.scheduled_modes.off.at).format(dateFormat):''
                         if (!(begAutoAtDate<=todayDate && begOffAtDate>=todayDate)) {
                             scheduled_auto_on = false
                             d.sendEvent(name:"rain_icon", value: "sun")
