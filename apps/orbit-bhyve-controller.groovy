@@ -151,14 +151,14 @@ def allDeviceStatus() {
     return JsonOutput.toJson(results)
 }
 
-def findMasterHub() {
+def findMasterDevice() {
     return getChildDevices().find { 
-        it.latestValue("type") == "bridge" && it.getDataValue("master") == "true"
+        it.latestValue("type") == "sprinkler_timer" && it.getDataValue("master") == "true"
     }
 }
 
 def sendRequest(valveState, device_id, zone, run_time) {
-    def bhyveHub = findMasterHub()
+    def bhyveHub = findMasterDevice()
     bhyveHub.sendWSMessage(valveState, device_id, zone, run_time)
     runIn(10, "main")
 }
@@ -493,9 +493,9 @@ def OrbitGet(command, device_id=null, mesh_id=null) {
         return null
     }
     if (command=='devices') {
-        def bridgeCount = respdata.type.count {it==typelist()[1]}
+        def bridgeCount = respdata.type.count { it == "bridge" }
         def bridgeMsg = (bridgeCount==0)?'in your Orbit b•hyve™ account':"and ${bridgeCount} network bridge device(s)"
-        state.devices = "Found ${respdata.type.count { it==typelist()[0]}} sprinkler timer(s) ${bridgeMsg}."
+        state.devices = "Found ${respdata.type.count { it== "sprinkler_timer" }} sprinkler timer(s) ${bridgeMsg}."
         state.timezone = respdata[0].timezone.timezone_id
     }
     return respdata
@@ -617,7 +617,13 @@ def add_bhyve_ChildDevice() {
                             DTHname: DTHName(it.type.split(" |-|_").collect{it.capitalize()}.join(" ")),
                             DTHlabel: "Bhyve ${it.zones[i].name?:it.name}"
                         ]
-                        createDevice(data)
+                    def sprinker = createDevice(data)
+                    if (!findMasterDevice()) {
+                        sprinker.updateDataValue("master", "true")
+                        sprinker.initialize()
+                    }
+                    else
+                        sprinker.updateDataValue("master", "false")
                     }
                     break
                 case 'bridge':
@@ -626,13 +632,7 @@ def add_bhyve_ChildDevice() {
                         DTHname:	DTHName(it.type.split(" |-|_").collect{it.capitalize()}.join(" ")),
                         DTHlabel: 	"Bhyve ${it.name}"
                     ]
-                    def bridge = createDevice(data)
-                    if (!findMasterHub()) {
-                        bridge.updateDataValue("master", "true")
-                        bridge.initialize()
-                    }
-                    else
-                        bridge.updateDataValue("master", "false")
+                    createDevice(data)
                     break
                 default:
                     log.error "Skipping: Unknown Orbit b•hyve deviceType '${it?.type}' for '${it?.name}'"
@@ -702,7 +702,6 @@ Map OrbitBhyveLoginHeaders() 	{
         'orbit-app-id':'Orbit Support Dashboard'
     ]
 }
-List typelist() { return ["sprinkler_timer","bridge"] }
 
 // ======= Push Routines ============
 
@@ -725,6 +724,10 @@ def getDeviceById(deviceId) {
     return getChildDevices().find { it.currentValue("id") == deviceId }
 }
 
+def getDeviceByIdAndStation(deviceId, station) {
+    return getChildDevices().find { it.currentValue("id") == deviceId && it.currentValue("station").toInteger() == station.toInteger() }
+}
+
 def sendInitializeCommandToMasterHub() {
-    findMasterHub().initialize()
+    findMasterDevice().initialize()
 }
