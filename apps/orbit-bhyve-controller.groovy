@@ -617,13 +617,13 @@ def add_bhyve_ChildDevice() {
                             DTHname: DTHName(it.type.split(" |-|_").collect{it.capitalize()}.join(" ")),
                             DTHlabel: "Bhyve ${it.zones[i].name?:it.name}"
                         ]
-                        def sprinker = createDevice(data)
+                        def sprinkler = createDevice(data)
                         if (!findMasterDevice()) {
-                            sprinker.updateDataValue("master", "true")
-                            sprinker.initialize()
+                            sprinkler.updateDataValue("master", "true")
+                            sprinkler.initialize()
                         }
                         else if (sprinkler.getDataValue("master") != "true")
-                            sprinker.updateDataValue("master", "false")
+                            sprinkler.updateDataValue("master", "false")
                     }
                     break
                 case 'bridge':
