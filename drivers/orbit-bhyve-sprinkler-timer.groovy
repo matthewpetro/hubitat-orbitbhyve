@@ -58,11 +58,20 @@ def refresh() {
 }
 
 def installed() {
+    state.webSocketOpen = false
+    state.retryCount = 0
+    state.nextRetry = 0
     sendEvent(name: "valve", value: "closed")
 }
 
 def uninstalled() {
     unschedule()
+    try {
+        interfaces.webSocket.close()
+    }
+    catch (e) {
+        
+    }
 }
 
 def open() {
@@ -81,31 +90,57 @@ def close() {
 
 def safeWSSend(obj) {
     if (state.webSocketOpen == false) {
-        log.error "Reconnecting to Web Socket"
-        interfaces.webSocket.connect(wsHost)
+        try {
+            interfaces.webSocket.close()
+        }
+        catch (e) {
+
+        }
+        if (state.nextRetry == 0 || now() >= state.nextRetry) {
+            log.error "Reconnecting to Web Socket"
+            log.debug "Was trying to send ${obj}"
+            state.retryCount++
+            if (state.retryCount == 1)
+                parent.OrbitBhyveLogin()
+            state.nextRetry = now() + (30000*((state.retryCount < 10) ? state.retryCount : 10))
+            interfaces.webSocket.connect(wsHost)
+            state.retryCommand = new JsonOutput().toJson(obj)
+            return
+        }
+        else {
+            log.warn "Waiting until ${new Date(state.nextRetry)} to reconnect ${state.retryCount}"
+            return
+        }
     }
+    else {
+        log.debug "Reset retries"
+        state.retryCount = 0
+        state.webSocketOpen = true
+    }
+    log.debug "Sending ${obj}"
     interfaces.webSocket.sendMessage(new JsonOutput().toJson(obj))
 }
 
 def initialize() {
     if (getDataValue("master") == "true") {
-        log.debug "Connecting to Web Socket"
-        interfaces.webSocket.connect(wsHost)
-        pauseExecution(5000)
-        def loginMsg = [
-            event: "app_connection",
-            orbit_session_token: parent.getApiToken()
-        ]
-        safeWSSend(loginMsg)
+        if (state.webSocketOpen == false) {
+            try {
+                interfaces.webSocket.close()
+            }
+            catch (e) {
+                
+            }
+            log.debug "Connecting to Web Socket"
+            interfaces.webSocket.connect(wsHost)
+        }
     }
     else
-        parent.sendInitializeCommandToMasterHub()    
+        parent.sendInitializeCommandToMasterHub()  
 }
 
 def parse(String message) {
-    
     def payload = new JsonSlurper().parseText(message)
-log.debug payload
+
     switch (payload.event) {
         case "watering_in_progress_notification":
             def dev = parent.getDeviceByIdAndStation(payload.device_id, payload.current_station)
@@ -136,6 +171,9 @@ log.debug payload
             if (dev)
                 dev.sendEvent(name: "rain_delay", value: payload.delay)
             break
+        case "low_battery":
+            parent.triggerLowBattery(device)
+            break
         case "program_changed":
             // TODO figure this out
             break
@@ -150,15 +188,26 @@ log.debug payload
 
 def webSocketStatus(String message) {
     if (message == "status: open") {
-        schedule("0/30 * * * * ? *", pingWebSocket)
         state.webSocketOpen = true
+        def loginMsg = [
+            event: "app_connection",
+            orbit_app_id: UUID.randomUUID().toString(),
+            orbit_session_token: parent.getApiToken()
+        ]
+        interfaces.webSocket.sendMessage(new JsonOutput().toJson(loginMsg))
+        pauseExecution(1000)
+        if (state.retryCommand != null) {
+            interfaces.webSocket.sendMessage(state.retryCommand)
+            state.retryCommand = null
+        }
+        schedule("0/30 * * * * ? *", pingWebSocket)
     }
     else if (message == "status: closing") {
         log.error "Lost connection to Web Socket: ${message}"
-        unschedule()
         state.webSocketOpen = false
     }
-    log.debug "web socket status: ${message}"
+    else
+        log.debug "web socket status: ${message}"
 }
 
 def sendWSMessage(valveState,device_id,zone,run_time) {
