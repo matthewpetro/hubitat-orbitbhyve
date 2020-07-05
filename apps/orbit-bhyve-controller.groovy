@@ -27,7 +27,7 @@ definition(
     name: 		"Orbit Bhyve Controller",
     namespace: 	"kurtsanders",
     author: 	"Kurt@KurtSanders.com",
-    description:"Control and monitor your network connected Orbit™ Bhyve Timer anywhere via SmartThings®",
+    description:"Control and monitor your network connected Orbit™ Bhyve Timer anywhere via Hubitat",
     category: 	"My Apps",
     iconUrl: 	"",
     iconX2Url: 	"",

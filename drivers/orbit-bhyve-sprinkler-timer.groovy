@@ -98,7 +98,6 @@ def safeWSSend(obj) {
         }
         if (state.nextRetry == 0 || now() >= state.nextRetry) {
             log.error "Reconnecting to Web Socket"
-            log.debug "Was trying to send ${obj}"
             state.retryCount++
             if (state.retryCount == 1)
                 parent.OrbitBhyveLogin()
@@ -113,11 +112,10 @@ def safeWSSend(obj) {
         }
     }
     else {
-        log.debug "Reset retries"
         state.retryCount = 0
         state.webSocketOpen = true
     }
-    log.debug "Sending ${obj}"
+    parent.debugVerbose "Sending ${obj}"
     interfaces.webSocket.sendMessage(new JsonOutput().toJson(obj))
 }
 
@@ -130,7 +128,7 @@ def initialize() {
             catch (e) {
                 
             }
-            log.debug "Connecting to Web Socket"
+            parent.debugVerbose "Connecting to Web Socket"
             interfaces.webSocket.connect(wsHost)
         }
     }
@@ -182,7 +180,7 @@ def parse(String message) {
             // Do nothing
             break
         default:
-            log.debug "Unknown message: ${message}"
+            log.warn "Unknown message: ${message}"
     }
 }
 
