@@ -731,3 +731,7 @@ def getDeviceByIdAndStation(deviceId, station) {
 def sendInitializeCommandToMasterHub() {
     findMasterDevice().initialize()
 }
+def triggerLowBattery(dev) {
+    if (eventsToNotify.contains('battery')) 
+        send_message("The battery is low in ${dev.displayName}")
+}
