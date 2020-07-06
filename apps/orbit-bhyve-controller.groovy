@@ -168,19 +168,19 @@ def sendRequest(valveState, device_id, zone, run_time) {
 }
 
 def valveHandler(evt) {
-    if (evt.isStateChange())
+    if (evt.isStateChange)
         send_message("The ${evt.linkText} ${evt.name} is now ${evt.value.toUpperCase()} at ${timestamp()}")
 }
 def rain_delayHandler(evt) {
-    if (evt.isStateChange())
+    if (evt.isStateChange)
         send_message("The ${evt.linkText}'s rain delay is now ${evt.value} hours at ${timestamp()}")
 }
 def batteryHandler(evt) {
-    if (evt.isStateChange() && (evt.value.toInteger() <= 40) ) 
+    if (evt.isStateChange && (evt.value.toInteger() <= 40) ) 
         send_message("The ${evt.linkText}'s battery is now at ${evt.value}% at ${timestamp()}")
 }
 def is_connectedHandler(evt) {
-    if (evt.isStateChange())
+    if (evt.isStateChange)
         send_message("The ${evt.linkText}'s WiFi Online Status is now ${evt.value?'Online':'Offline'} at ${timestamp()}")
 }
 
