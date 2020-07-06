@@ -109,10 +109,14 @@ def initialize() {
     add_bhyve_ChildDevice()
     setScheduler(schedulerFreq)
     if (eventsToNotify) {
-        if (eventsToNotify.contains('valve')) 		{subscribe(app.getChildDevices(), "valve", valveHandler)}
-        if (eventsToNotify.contains('battery')) 	{subscribe(app.getChildDevices(), "battery", batteryHandler)}
-        if (eventsToNotify.contains('rain')) 		{subscribe(app.getChildDevices(), "rain_delay", rain_delayHandler)}
-        if (eventsToNotify.contains('connected')) 	{subscribe(app.getChildDevices(), "is_connected", is_connectedHandler)}
+        if (eventsToNotify.contains('valve')) 
+            getChildDevices().each { subscribe(it, "valve", valveHandler)}
+        if (eventsToNotify.contains('battery')) 
+            getChildDevices().each { subscribe(it, "battery", batteryHandler)}
+        if (eventsToNotify.contains('rain'))
+            getChildDevices().each { subscribe(it, "rain_delay", rain_delayHandler)}
+        if (eventsToNotify.contains('connected'))
+            getChildDevices().each { subscribe(it, "is_connected", is_connectedHandler)}
     }
     runIn(5, main)
 }
