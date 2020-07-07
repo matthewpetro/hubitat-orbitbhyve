@@ -66,11 +66,13 @@ def installed() {
 
 def uninstalled() {
     unschedule()
-    try {
-        interfaces.webSocket.close()
-    }
-    catch (e) {
-        
+    if (getDataValue("master") == "true") {
+        try {
+            interfaces.webSocket.close()
+        }
+        catch (e) {
+            
+        }
     }
 }
 
@@ -111,29 +113,24 @@ def safeWSSend(obj) {
             return
         }
     }
-    else {
+    else
         state.retryCount = 0
-        state.webSocketOpen = true
-    }
+    
     parent.debugVerbose "Sending ${obj}"
     interfaces.webSocket.sendMessage(new JsonOutput().toJson(obj))
 }
 
 def initialize() {
     if (getDataValue("master") == "true") {
-        if (state.webSocketOpen == false) {
-            try {
-                interfaces.webSocket.close()
-            }
-            catch (e) {
-                
-            }
-            parent.debugVerbose "Connecting to Web Socket"
-            interfaces.webSocket.connect(wsHost)
+        try {
+            interfaces.webSocket.close()
         }
+        catch (e) {
+            
+        }
+        parent.debugVerbose "Connecting to Web Socket"
+        interfaces.webSocket.connect(wsHost)
     }
-    else
-        parent.sendInitializeCommandToMasterHub()  
 }
 
 def parse(String message) {
@@ -187,6 +184,7 @@ def parse(String message) {
 def webSocketStatus(String message) {
     if (message == "status: open") {
         state.webSocketOpen = true
+        state.webSocketOpenTime = now()
         def loginMsg = [
             event: "app_connection",
             orbit_app_id: UUID.randomUUID().toString(),
@@ -201,6 +199,10 @@ def webSocketStatus(String message) {
         schedule("0/30 * * * * ? *", pingWebSocket)
     }
     else if (message == "status: closing") {
+        log.error "Lost connection to Web Socket: ${message}"
+        state.webSocketOpen = false
+    }
+    else if (message.startsWith("failure:")) {
         log.error "Lost connection to Web Socket: ${message}"
         state.webSocketOpen = false
     }
@@ -231,6 +233,11 @@ def sendWSMessage(valveState,device_id,zone,run_time) {
 }
 
 def pingWebSocket() {
+    if (now()-(30*60*1000) >= state.webSocketOpenTime) {
+        parent.debugVerbose "WebSocket has been open for 30 minutes, reconnecting"
+        initialize()
+        return
+    }
     def pingMsg = [ event: "ping"]
     safeWSSend(pingMsg)
 }

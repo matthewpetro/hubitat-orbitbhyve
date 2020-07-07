@@ -732,9 +732,6 @@ def getDeviceByIdAndStation(deviceId, station) {
     return getChildDevices().find { it.currentValue("id") == deviceId && it.currentValue("station").toInteger() == station.toInteger() }
 }
 
-def sendInitializeCommandToMasterHub() {
-    findMasterDevice().initialize()
-}
 def triggerLowBattery(dev) {
     if (eventsToNotify.contains('battery')) 
         send_message("The battery is low in ${dev.displayName}")
