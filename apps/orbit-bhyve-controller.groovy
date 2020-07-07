@@ -185,12 +185,12 @@ def is_connectedHandler(evt) {
 }
 
 def refresh() {
-    debugVerbose("Executing Refresh Routine ID:${random()} at ${timestamp()}")
+    debugVerbose("Executing Refresh Routine at ${timestamp()}")
     main()
 }
 
 def main() {
-    infoVerbose "Executing Main Routine ID:${random()} at ${timestamp()}"
+    infoVerbose "Executing Main Routine at ${timestamp()}"
     def data = OrbitGet("devices")
     if (data) {
         updateTiles(data)
@@ -200,8 +200,7 @@ def main() {
 }
 
 def updateTiles(data) {
-    Random random = new Random()
-    debugVerbose("Executing updateTiles(data) #${random.nextInt(1000)} started...")
+    debugVerbose("Executing updateTiles(data) started...")
     def d
     def started_watering_station_at
     def watering_events
@@ -254,12 +253,11 @@ def updateTiles(data) {
 
                 // Check for Orbit sprinkler_timer device
                 if (deviceType == 'sprinkler_timer') {
-                    log.debug it
                     zoneData = it.zones[i]
                     station = zoneData.station
                     scheduled_auto_on = true
                     d = getChildDevice("${DTHDNI(it.id)}:${station}")
-                    infoVerbose "Procesing Orbit Sprinkler Device: '${it.name}', Orbit Station #${station}, Zone Name: '${zoneData.name}'"
+                    infoVerbose "Processing Orbit Sprinkler Device: '${it.name}', Orbit Station #${station}, Zone Name: '${zoneData.name}'"
 
                     def byhveValveState = it.status.watering_status?"open":"closed"
                     d.sendEvent(name:"valve", value: byhveValveState )
@@ -281,7 +279,7 @@ def updateTiles(data) {
                         d.sendEvent(name:"battery", value: 100)
 
                     // Check for System On/Off Mode for this device
-                    if (it.scheduled_modes.containsKey('auto') && it.scheduled_modes.containsKey('off')) {
+                    if (it.scheduled_modes?.containsKey('auto') && it.scheduled_modes?.containsKey('off')) {
                         def dateFormat = (it.scheduled_modes?.auto?.annually==true)?"MMdd":"YYYYMMdd"
                         def todayDate = new Date().format(dateFormat, location.timeZone)
                         def begAutoAtDate = it.scheduled_modes?.auto?.at?Date.parse("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",it.scheduled_modes.auto.at).format(dateFormat):''
