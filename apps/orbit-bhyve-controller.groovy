@@ -254,6 +254,7 @@ def updateTiles(data) {
 
                 // Check for Orbit sprinkler_timer device
                 if (deviceType == 'sprinkler_timer') {
+                    log.debug it
                     zoneData = it.zones[i]
                     station = zoneData.station
                     scheduled_auto_on = true
