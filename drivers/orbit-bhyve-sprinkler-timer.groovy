@@ -59,6 +59,8 @@ def refresh() {
 
 def installed() {
     state.webSocketOpen = false
+    updateDataValue("webSocketOpen", "false")
+    log.debug "${state.webSocketOpen}"
     state.retryCount = 0
     state.nextRetry = 0
     sendEvent(name: "valve", value: "closed")
@@ -99,7 +101,7 @@ def safeWSSend(obj) {
 
         }
         if (state.nextRetry == 0 || now() >= state.nextRetry) {
-            log.error "Reconnecting to Web Socket"
+            parent.debugVerbose "Reconnecting to Web Socket"
             state.retryCount++
             if (state.retryCount == 1)
                 parent.OrbitBhyveLogin()
@@ -116,13 +118,15 @@ def safeWSSend(obj) {
     else
         state.retryCount = 0
     
-    parent.debugVerbose "Sending ${obj}"
     interfaces.webSocket.sendMessage(new JsonOutput().toJson(obj))
 }
 
 def initialize() {
     if (getDataValue("master") == "true") {
         try {
+            state.webSocketOpen = false
+            updateDataValue("webSocketOpen", "false")
+            log.debug "${state.webSocketOpen}"
             interfaces.webSocket.close()
         }
         catch (e) {
@@ -184,12 +188,15 @@ def parse(String message) {
 def webSocketStatus(String message) {
     if (message == "status: open") {
         state.webSocketOpen = true
+        updateDataValue("webSocketOpen", "true")
+        log.debug "${state.webSocketOpen}"
         state.webSocketOpenTime = now()
         def loginMsg = [
             event: "app_connection",
             orbit_app_id: UUID.randomUUID().toString(),
             orbit_session_token: parent.getApiToken()
         ]
+        
         interfaces.webSocket.sendMessage(new JsonOutput().toJson(loginMsg))
         pauseExecution(1000)
         if (state.retryCommand != null) {
@@ -201,13 +208,20 @@ def webSocketStatus(String message) {
     else if (message == "status: closing") {
         log.error "Lost connection to Web Socket: ${message}"
         state.webSocketOpen = false
+        updateDataValue("webSocketOpen", "false")
+        log.debug "${state.webSocketOpen}"
     }
     else if (message.startsWith("failure:")) {
         log.error "Lost connection to Web Socket: ${message}"
         state.webSocketOpen = false
+        updateDataValue("webSocketOpen", "false")
+        log.debug "${state.webSocketOpen}"
     }
-    else
-        log.debug "web socket status: ${message}"
+    else {
+        log.error "web socket status: ${message}"
+        state.webSocketOpen = false
+        updateDataValue("webSocketOpen", "false")
+    }
 }
 
 def sendWSMessage(valveState,device_id,zone,run_time) {
