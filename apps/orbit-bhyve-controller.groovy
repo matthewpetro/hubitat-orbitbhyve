@@ -17,7 +17,6 @@
 */
 import groovy.time.*
 import java.text.SimpleDateFormat
-import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import groovy.transform.Field
 
@@ -710,6 +709,6 @@ def triggerLowBattery(dev) {
 }
 
 def getOrbitDeviceIdFromDNI(dni) {
-    return dni?.split(-)[2]?.split(:)[0]
+    return dni?.split('-')[2]?.split(':')[0]
 }
 
