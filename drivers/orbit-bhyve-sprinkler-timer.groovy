@@ -50,6 +50,7 @@ metadata {
         attribute "scheduled_auto_on", "enum", ['true','false']
         attribute "type", "string"
         attribute "water_volume_gal", "number"
+        attribute "water_flow_rate", "number"
     }
 }
 
@@ -148,7 +149,7 @@ def parse(String message) {
             break
         case "watering_complete":
             def dev = parent.getDeviceById(payload.device_id)
-            if (dev)
+            if (dev) 
                 dev.sendEvent(name: "valve", value: "closed")
             break
         case "change_mode":
@@ -172,6 +173,11 @@ def parse(String message) {
             break
         case "low_battery":
             parent.triggerLowBattery(device)
+            break
+        case "flow_sensor_state_changed":
+            def dev = parent.getDeviceById(payload.device_id)
+            if (dev)
+                dev.sendEvent(name: "water_flow_rate", value: payload.flow_rate_gpm)
             break
         case "program_changed":
             // TODO figure this out
