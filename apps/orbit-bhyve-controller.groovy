@@ -270,7 +270,7 @@ def updateTiles(data) {
                         } 
                         else {
                             d.sendEvent(name:"rain_icon", value: "sun")
-                            def next_start_time_local = Date.parse("yyyy-MM-dd'T'HH:mm:ssX",it.status.next_start_time).format("yyyy-MM-dd'T'HH:mm:ssX", location.timeZone)
+                            def next_start_time_local = Date.parse("yyyy-MM-dd'T'HH:mm:ssX",it.status.next_start_time)
                             d.sendEvent(name:"next_start_time", value: next_start_time_local.getTime())
                         }
                     }
