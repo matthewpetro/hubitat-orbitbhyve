@@ -75,13 +75,7 @@ def uninstalled() {
 }
 
 def open() {
-   // if (device.latestValue('scheduled_auto_on')=='true') {
-        parent.sendRequest('open', device.latestValue('id'), device.latestValue('station'),device.latestValue('preset_runtime') )
-   // } else {
-   //     def message =  "Orbit device requested to manually OPEN but scheduled_auto_on = false, ignorning request"
-   //     log.warn message
-   //     sendEvent(name: "valve", value: "closed", isStateChange: true, linkText: message)
-   // }
+    parent.sendRequest('open', device.latestValue('id'), device.latestValue('station'),device.latestValue('preset_runtime') )
 }
 
 def close() {
