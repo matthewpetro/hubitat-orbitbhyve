@@ -19,6 +19,7 @@ import groovy.time.*
 import java.text.SimpleDateFormat
 import groovy.json.JsonSlurper
 import groovy.transform.Field
+import groovy.time.TimeCategory
 
 @Field String apiUrl = "https://api.orbitbhyve.com/v1/"
 
@@ -260,7 +261,12 @@ def updateTiles(data) {
                     if (scheduled_auto_on) {
                         if (it.status.rain_delay > 0) {
                             d.sendEvent(name:"rain_icon", value: "rain")
-                            def rainDelayDT = Date.parse("yyyy-MM-dd'T'HH:mm:ssX",it.status.next_start_time).format("yyyy-MM-dd'T'HH:mm:ssX", location.timeZone)
+                            def nextRun = Date.parse("yyyy-MM-dd'T'HH:mm:ssX",it.status.next_start_time)
+                            def rainDelay = it.status.rain_delay
+                            use (TimeCategory) {
+                                nextRun = nextRun + rainDelay.hours
+                            }
+                            def rainDelayDT = nextRun.format("yyyy-MM-dd'T'HH:mm:ssX", location.timeZone)
                             d.sendEvent(name:"next_start_time", value: durationFromNow(rainDelayDT))
                         } 
                         else {
