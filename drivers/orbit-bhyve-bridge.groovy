@@ -14,25 +14,14 @@
 *
 */
 
-import groovy.time.*
-import java.text.DecimalFormat
-import java.text.SimpleDateFormat
-
 metadata {
     definition (name: "Orbit Bhyve Bridge", namespace: "kurtsanders", author: "kurt@kurtsanders.com") {
         capability "Refresh"
         capability "Sensor"
 
-        attribute "is_connected", "enum", ['true','false']
-        attribute "id", "string"
-        attribute "type", "string"
+        attribute "is_connected", "bool"
         attribute "firmware_version", "string"
         attribute "hardware_version", "string"
-        attribute "schedulerFreq", "string"
-        attribute "lastupdate", "string"
-        attribute "statusText", "string"
-        attribute "name","string"
-        attribute "type","string"
     }
 }
 

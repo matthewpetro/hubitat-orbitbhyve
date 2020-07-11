@@ -31,11 +31,8 @@ metadata {
         capability "Valve"
         capability "Initialize"
 
-        attribute "id", "string"
-        attribute "is_connected", "enum", ['true','false']
-        attribute "lastupdate", "string"
+        attribute "is_connected", "bool"
         attribute "manual_preset_runtime_min", "number"
-        attribute "name","string"
         attribute "next_start_programs", "string"
         attribute "next_start_time", "string"
         attribute "preset_runtime", "number"
@@ -43,12 +40,10 @@ metadata {
         attribute "rain_icon", "string"
         attribute "rain_delay", "string"
         attribute "run_mode", "enum", ["auto, manual"]
-        attribute "schedulerFreq", "string"
         attribute "sprinkler_type", "string"
         attribute "start_times", "string"
         attribute "station", "string"
-        attribute "scheduled_auto_on", "enum", ['true','false']
-        attribute "type", "string"
+        attribute "scheduled_auto_on", "bool"
         attribute "water_volume_gal", "number"
         attribute "water_flow_rate", "number"
     }

@@ -45,10 +45,8 @@ preferences {
 
 def mainMenu() {
     def orbitBhyveLoginOK = false
-    if (username && password) {
+    if (username && password)
         orbitBhyveLoginOK = OrbitBhyveLogin()
-        def respdata = orbitBhyveLoginOK ? OrbitGet("devices") : null
-    }
     dynamicPage(name: "mainMenu", title: "Orbit B•Hyve™ Timer Account Login Information", nextPage: orbitBhyveLoginOK ? "mainOptions" : null, install: false, uninstall: true)
     {
         if (username && password) {
@@ -134,30 +132,9 @@ def uninstalled() {
     remove_bhyve_ChildDevice()
 }
 
-def allDeviceStatus() {
-    def results = [:]
-    app.getChildDevices().each {
-        def d = getChildDevice(it.deviceNetworkId)
-        def type = d.latestValue('type')
-        if (!results.containsKey(type)) {
-            results[type] = []
-        }
-        results[type].add(
-            [
-                name: it.name,
-                type: it.typeName,
-                valve: d.latestValue('valve'),
-                id: d.latestValue('id'),
-                manual_preset_runtime_min: d.latestValue('manual_preset_runtime_min')
-            ]
-        )
-    }
-    return JsonOutput.toJson(results)
-}
-
 def findMasterDevice() {
     return getChildDevices().find { 
-        it.latestValue("type") == "sprinkler_timer" && it.getDataValue("master") == "true"
+        it.hasCapability("Initialize") && it.getDataValue("master") == "true"
     }
 }
 
@@ -232,14 +209,7 @@ def updateTiles(data) {
             station = it.containsKey('zones')?it.zones[i].station:zone
             d = getChildDevice("${DTHDNI(it.id)}:${station}")
             if (d) {
-                // sendEvents calculated values for all device types
-                d.sendEvent(name:"schedulerFreq", 	value: schedulerFreq)
                 // sendEvents for selected fields of the data record
-
-                d.sendEvent(name:"lastupdate", value: "Station ${station} last connected at\n${convertDateTime(it.last_connected_at)}")
-                d.sendEvent(name:"name", value: it.name)
-                d.sendEvent(name:"type", value: it.type)
-                d.sendEvent(name:"id", value: it.id)
                 d.sendEvent(name:"is_connected",value: it.is_connected)
                 // Check for Orbit WiFi bridge
                 if (deviceType == 'bridge') {
@@ -727,14 +697,22 @@ def getApiToken() {
 }
 
 def getDeviceById(deviceId) {
-    return getChildDevices().find { it.currentValue("id") == deviceId }
+    return getChildDevices().find { getOrbitDeviceIdFromDNI(it) == deviceId }
 }
 
 def getDeviceByIdAndStation(deviceId, station) {
-    return getChildDevices().find { it.currentValue("id") == deviceId && it.currentValue("station").toInteger() == station.toInteger() }
+    return getChildDevices().find { getOrbitDeviceIdFromDNI(it) == deviceId && it.currentValue("station").toInteger() == station.toInteger() }
 }
 
 def triggerLowBattery(dev) {
     if (eventsToNotify.contains('battery')) 
         send_message("The battery is low in ${dev.displayName}")
 }
+
+def getOrbitDeviceIdFromDNI(dni) {
+    return dni?.split(-)[2]?.split(:)[0]
+}
+
+//bhyve-3209-5efe7a7e4f0c226b41a8ab19:1
+//bhyve-3209-5efe7a4b4f0c226b41a8ab06:0
+
