@@ -192,11 +192,8 @@ def refresh() {
 def main() {
     infoVerbose "Executing Main Routine at ${timestamp()}"
     def data = OrbitGet("devices")
-    if (data) {
+    if (data) 
         updateTiles(data)
-    } 
-    else 
-        log.error "OrbitGet(devices): No data returned, Critical Error: Exit"
 }
 
 def updateTiles(data) {
@@ -491,7 +488,16 @@ def OrbitGet(command, device_id=null, mesh_id=null) {
                 return null
             }
         }
-    } catch (e) {
+    } 
+    catch (groovyx.net.http.HttpResponseException e) {
+        def status = e.getResponse().status
+        if  (status >= 400 && status <= 499) {
+            log.error "Received a 4xx error, logging back in"
+            OrbitBhyveLogin()
+            return null
+        } 
+    }
+    catch (Exception e) {
         log.error "OrbitGet($command): something went wrong: $e"
         return null
     }
@@ -505,7 +511,6 @@ def OrbitGet(command, device_id=null, mesh_id=null) {
 }
 
 def OrbitBhyveLogin() {
-    debugVerbose "Start OrbitBhyveLogin() ============="
     if ((username==null) || (password==null)) 
         return false
     def params = [
@@ -550,8 +555,6 @@ def OrbitBhyveLogin() {
         state.statusText = "Fatal Error for Orbit B•Hyve™ Login '${e}'"
         return false
     }
-
-    debugVerbose "OrbitBhyveLogin(): End=========="
     return true
 }
 
