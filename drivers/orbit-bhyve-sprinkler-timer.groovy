@@ -34,7 +34,7 @@ metadata {
         attribute "is_connected", "bool"
         attribute "manual_preset_runtime_min", "number"
         attribute "next_start_programs", "string"
-        attribute "next_start_time", "string"
+        attribute "next_start_time", "number"
         attribute "preset_runtime", "number"
         attribute "programs", "string"
         attribute "rain_icon", "string"

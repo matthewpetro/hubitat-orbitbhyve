@@ -140,7 +140,7 @@ def findMasterDevice() {
 
 def sendRequest(valveState, device_id, zone, run_time) {
     def bhyveHub = findMasterDevice()
-    bhyveHub.sendWSMessage(valveState, device_id, zone, run_time)
+    bhyveHub?.sendWSMessage(valveState, device_id, zone, run_time)
     runIn(10, "main")
 }
 
@@ -206,7 +206,7 @@ def updateTiles(data) {
                 break
         }
         for (i = 0 ; i < zones; i++) {
-            station = it.containsKey('zones')?it.zones[i].station:zone
+            station = it.containsKey('zones') ? it.zones[i].station : zone
             d = getChildDevice("${DTHDNI(it.id)}:${station}")
             if (d) {
                 // sendEvents for selected fields of the data record
@@ -226,8 +226,8 @@ def updateTiles(data) {
                     d = getChildDevice("${DTHDNI(it.id)}:${station}")
                     infoVerbose "Processing Orbit Sprinkler Device: '${it.name}', Orbit Station #${station}, Zone Name: '${zoneData.name}'"
 
-                    def byhveValveState = it.status.watering_status?"open":"closed"
-                    d.sendEvent(name:"valve", value: byhveValveState )
+                    def byhveValveState = it.status.watering_status ? "open" : "closed"
+                    d.sendEvent(name:"valve", value: byhveValveState)
 					def presetWateringInt = it.manual_preset_runtime_sec.toInteger()/60
                     d.sendEvent(name:"preset_runtime", value: presetWateringInt)
                     d.sendEvent(name:"manual_preset_runtime_min", value: presetWateringInt)
@@ -254,7 +254,7 @@ def updateTiles(data) {
                         if (!(begAutoAtDate<=todayDate && begOffAtDate>=todayDate)) {
                             scheduled_auto_on = false
                             d.sendEvent(name:"rain_icon", value: "sun")
-                            d.sendEvent(name:"next_start_time", value: "System Auto Off Mode")
+                            d.sendEvent(name:"next_start_time", value: 0)
                         }
                     }
                     d.sendEvent(name:"scheduled_auto_on", value: scheduled_auto_on)
@@ -266,13 +266,12 @@ def updateTiles(data) {
                             use (TimeCategory) {
                                 nextRun = nextRun + rainDelay.hours
                             }
-                            def rainDelayDT = nextRun.format("yyyy-MM-dd'T'HH:mm:ssX", location.timeZone)
-                            d.sendEvent(name:"next_start_time", value: durationFromNow(rainDelayDT))
+                            d.sendEvent(name:"next_start_time", value: nextRun.getTime())
                         } 
                         else {
                             d.sendEvent(name:"rain_icon", value: "sun")
                             def next_start_time_local = Date.parse("yyyy-MM-dd'T'HH:mm:ssX",it.status.next_start_time).format("yyyy-MM-dd'T'HH:mm:ssX", location.timeZone)
-                            d.sendEvent(name:"next_start_time", value: durationFromNow(next_start_time_local))
+                            d.sendEvent(name:"next_start_time", value: next_start_time_local.getTime())
                         }
                     }
 
