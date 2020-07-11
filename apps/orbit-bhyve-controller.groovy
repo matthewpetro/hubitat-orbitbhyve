@@ -713,6 +713,3 @@ def getOrbitDeviceIdFromDNI(dni) {
     return dni?.split(-)[2]?.split(:)[0]
 }
 
-//bhyve-3209-5efe7a7e4f0c226b41a8ab19:1
-//bhyve-3209-5efe7a4b4f0c226b41a8ab06:0
-
