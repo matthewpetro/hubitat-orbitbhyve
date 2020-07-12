@@ -255,6 +255,6 @@ def setWebSocketStatus(status) {
 }
 
 def isWebSocketOpen() {
-    log.debug "Open? ${state.webSocketOpen && !webSocketOpen && getDataValue("webSocketOpen") == "true"}"
+    log.debug "Statuses: ${state.webSocketOpen} ${getDataValue("webSocketOpen")} ${webSocketOpen}"
     return state.webSocketOpen &&  webSocketOpen && getDataValue("webSocketOpen") == "true"
 }
