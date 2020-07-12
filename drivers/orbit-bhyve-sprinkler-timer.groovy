@@ -82,7 +82,7 @@ def close() {
     parent.sendRequest('close', parent.getOrbitDeviceIdFromDNI(device.deviceNetworkId), device.latestValue('station'),device.latestValue('preset_runtime') )
 }
 
-def safeWSSend(obj) {
+def safeWSSend(obj, retry) {
     synchronized (socketStatusLock) {
         if (!isWebSocketOpen()) {
             log.debug "Asked to send a message but the socket is closed"
@@ -99,7 +99,8 @@ def safeWSSend(obj) {
                     parent.OrbitBhyveLogin()
                 state.nextRetry = now() + (30000*((state.retryCount < 10) ? state.retryCount : 10))
                 interfaces.webSocket.connect(wsHost)
-                state.retryCommand = new JsonOutput().toJson(obj)
+                if (retry)
+                    state.retryCommand = new JsonOutput().toJson(obj)
                 return
             }
             else {
@@ -172,6 +173,7 @@ def parse(String message) {
                 dev.sendEvent(name: "water_flow_rate", value: payload.flow_rate_gpm)
             break
         case "program_changed":
+            log.debug payload
             // TODO figure this out
             break
         case "device_idle":
@@ -245,7 +247,7 @@ def sendWSMessage(valveState,device_id,zone,run_time) {
         msg.stations = []
     }
     log.debug "Sending: ${msg}"
-    safeWSSend(msg)
+    safeWSSend(msg, true)
 }
 
 def pingWebSocket() {
@@ -255,7 +257,7 @@ def pingWebSocket() {
         return
     }
     def pingMsg = [ event: "ping"]
-    safeWSSend(pingMsg)
+    safeWSSend(pingMsg, false)
 }
 
 def getTimestamp() {
