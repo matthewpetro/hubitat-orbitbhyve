@@ -173,7 +173,6 @@ def parse(String message) {
                 dev.sendEvent(name: "water_flow_rate", value: payload.flow_rate_gpm)
             break
         case "program_changed":
-            log.debug payload
             // TODO figure this out
             break
         case "device_idle":
