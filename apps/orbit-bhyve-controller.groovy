@@ -701,12 +701,11 @@ def getApiToken() {
 }
 
 def getDeviceById(deviceId) {
-    log.debug "Looking for ${deviceId}"
-    return getChildDevices().find { getOrbitDeviceIdFromDNI(it) == deviceId }
+    return getChildDevices().find { getOrbitDeviceIdFromDNI(it.deviceNetworkId) == deviceId }
 }
 
 def getDeviceByIdAndStation(deviceId, station) {
-    return getChildDevices().find { getOrbitDeviceIdFromDNI(it) == deviceId && it.currentValue("station").toInteger() == station.toInteger() }
+    return getChildDevices().find { getOrbitDeviceIdFromDNI(it.deviceNetworkId) == deviceId && it.currentValue("station").toInteger() == station.toInteger() }
 }
 
 def triggerLowBattery(dev) {
@@ -715,7 +714,6 @@ def triggerLowBattery(dev) {
 }
 
 def getOrbitDeviceIdFromDNI(dni) {
-    log.debug "DNI is ${dni}"
     return dni?.split('-')[2]?.split(':')[0]
 }
 
