@@ -332,70 +332,18 @@ def updateTiles(data) {
                             def water_volume_gal = watering_events.irrigation.water_volume_gal?:0
                             started_watering_station_at = convertDateTime(it.status.watering_status.started_watering_station_at)
                             d.sendEvent(name:"water_volume_gal", value: water_volume_gal, descriptionText:"${water_volume_gal} gallons")
-                            wateringTimeLeft = durationFromNow(it.status.next_start_time, "minutes")
-                            wateringTimeLeft = durationFromNow(it.status.next_start_time, "minutes")
-                            d.sendEvent(name:"level", value: wateringTimeLeft, descriptionText: "${wateringTimeLeft} minutes left till end" )
                         } 
-                        else {
+                        else
                             d.sendEvent(name:"water_volume_gal", value: 0, descriptionText:"gallons")
-                            d.sendEvent(name:"level", value: watering_events?.irrigation?.run_time)
-                        }
                     } 
-                    else {
+                    else
                         d.sendEvent(name:"water_volume_gal"	, value: 0, descriptionText:"gallons")
-                        d.sendEvent(name:"level", value: 0)
-                    }
                 }
             } 
             else
                 log.error "Invalid Orbit Device ID: '${it.id}'. If you have added a NEW bhyve device, you must rerun the SmartApp setup to create a SmartThings device"
         }
     }
-}
-
-def durationFromNow(dt,showOnly=null) {
-    def endDate
-    String rc
-    def duration
-    def dtpattern = dt.contains('Z')?"yyyy-MM-dd'T'HH:mm:ss.SSS'Z'":"yyyy-MM-dd'T'HH:mm:ssX"
-    if (dtpattern) {
-        try {
-            endDate = Date.parse(dtpattern, dt)
-        } catch (e) {
-            log.error "durationFromNow(): Error converting ${dt}: ${e}"
-            return false
-        }
-    } 
-    else {
-        log.error "durationFromNow(): Invalid date format for ${dt}"
-        return false
-    }
-    def now = new Date()
-    use (TimeCategory) {
-        try {
-            duration = (endDate - now)
-        } catch (e) {
-            log.error "TimeCategory Duration Error with enddate: '${endDate}' and  now(): '${now}': ${e}"
-            rc = false
-        }
-    }
-    if (duration) {
-        rc = duration
-        switch (showOnly) {
-            case 'minutes':
-                if (/\d+(?=\Wminutes)/) {
-                def result = (rc =~ /\d+(?=\Wminutes)/)
-                    return (result[0])
-                } 
-                else 
-                    return (rc.replaceAll(/\.\d+/,''))
-                break
-            default:
-                return (rc.replaceAll(/\.\d+/,'').split(',').length<3)?rc.replaceAll(/\.\d+/,''):(rc.replaceAll(/\.\d+/,'').split(',')[0,1].join())
-
-        }
-    }
-    return rc
 }
 
 def timestamp(type='long', mobileTZ=false) {
