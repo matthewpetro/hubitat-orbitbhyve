@@ -23,6 +23,7 @@ import groovy.json.JsonSlurper
 @Field static String wsHost = "wss://api.orbitbhyve.com/v1/events"
 @Field static String timeStampFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
 @Field static boolean webSocketOpen = false
+@Field static Object socketStatusLock = new Object()
 
 metadata {
     definition (name: "Orbit Bhyve Sprinkler Timer", namespace: "kurtsanders", author: "kurt@kurtsanders.com") {
@@ -74,53 +75,58 @@ def uninstalled() {
 }
 
 def open() {
-    parent.sendRequest('open', device.latestValue('id'), device.latestValue('station'),device.latestValue('preset_runtime') )
+    parent.sendRequest('open', parent.getOrbitDeviceIdFromDNI(device.deviceNetworkId), device.latestValue('station'),device.latestValue('preset_runtime') )
 }
 
 def close() {
-    parent.sendRequest('close', device.latestValue('id'), device.latestValue('station'),device.latestValue('preset_runtime') )
+    parent.sendRequest('close', parent.getOrbitDeviceIdFromDNI(device.deviceNetworkId), device.latestValue('station'),device.latestValue('preset_runtime') )
 }
 
 def safeWSSend(obj) {
-    if (!isWebSocketOpen()) {
-        try {
-            interfaces.webSocket.close()
-        }
-        catch (e) {
+    synchronized (socketStatusLock) {
+        if (!isWebSocketOpen()) {
+            log.debug "Asked to send a message but the socket is closed"
+            try {
+                interfaces.webSocket.close()
+            }
+            catch (e) {
 
+            }
+            if (state.nextRetry == 0 || now() >= state.nextRetry) {
+                log.debug "Reconnecting to Web Socket"
+                state.retryCount++
+                if (state.retryCount == 1)
+                    parent.OrbitBhyveLogin()
+                state.nextRetry = now() + (30000*((state.retryCount < 10) ? state.retryCount : 10))
+                interfaces.webSocket.connect(wsHost)
+                state.retryCommand = new JsonOutput().toJson(obj)
+                return
+            }
+            else {
+                log.warn "Waiting until ${new Date(state.nextRetry)} to reconnect ${state.retryCount}"
+                return
+            }
         }
-        if (state.nextRetry == 0 || now() >= state.nextRetry) {
-            log.debug "Reconnecting to Web Socket"
-            state.retryCount++
-            if (state.retryCount == 1)
-                parent.OrbitBhyveLogin()
-            state.nextRetry = now() + (30000*((state.retryCount < 10) ? state.retryCount : 10))
-            interfaces.webSocket.connect(wsHost)
-            state.retryCommand = new JsonOutput().toJson(obj)
-            return
-        }
-        else {
-            log.warn "Waiting until ${new Date(state.nextRetry)} to reconnect ${state.retryCount}"
-            return
-        }
+        else
+            state.retryCount = 0
+        
+        interfaces.webSocket.sendMessage(new JsonOutput().toJson(obj))
     }
-    else
-        state.retryCount = 0
-    
-    interfaces.webSocket.sendMessage(new JsonOutput().toJson(obj))
 }
 
 def initialize() {
-    if (getDataValue("master") == "true") {
-        try {
-            setWebSocketStatus(false)
-            interfaces.webSocket.close()
+    synchronized (socketStatusLock) {
+        if (getDataValue("master") == "true") {
+            try {
+                setWebSocketStatus(false)
+                interfaces.webSocket.close()
+            }
+            catch (e) {
+                
+            }
+            log.debug "Connecting to Web Socket"
+            interfaces.webSocket.connect(wsHost)
         }
-        catch (e) {
-            
-        }
-        log.debug "Connecting to Web Socket"
-        interfaces.webSocket.connect(wsHost)
     }
 }
 
@@ -179,33 +185,43 @@ def parse(String message) {
 
 def webSocketStatus(String message) {
     if (message == "status: open") {
-        setWebSocketStatus(true)
-        state.webSocketOpenTime = now()
-        def loginMsg = [
-            event: "app_connection",
-            orbit_app_id: UUID.randomUUID().toString(),
-            orbit_session_token: parent.getApiToken()
-        ]
-        
-        interfaces.webSocket.sendMessage(new JsonOutput().toJson(loginMsg))
+        synchronized (socketStatusLock) {
+            log.debug "Reconnect successful"
+            setWebSocketStatus(true)
+            state.webSocketOpenTime = now()
+            def loginMsg = [
+                event: "app_connection",
+                orbit_app_id: UUID.randomUUID().toString(),
+                orbit_session_token: parent.getApiToken()
+            ]
+            
+            interfaces.webSocket.sendMessage(new JsonOutput().toJson(loginMsg))
+        }
         pauseExecution(1000)
         if (state.retryCommand != null) {
+            log.debug "Retrying command from before connection lost ${state.retryCommand}"
             interfaces.webSocket.sendMessage(state.retryCommand)
             state.retryCommand = null
         }
         schedule("0/30 * * * * ? *", pingWebSocket)
     }
     else if (message == "status: closing") {
-        log.error "Lost connection to Web Socket: ${message}"
-        setWebSocketStatus(false)
+        synchronized (socketStatusLock) {
+            log.error "Lost connection to Web Socket: ${message}"
+            setWebSocketStatus(false)
+        }
     }
     else if (message.startsWith("failure:")) {
-        log.error "Lost connection to Web Socket: ${message}"
-        setWebSocketStatus(false)
+        synchronized (socketStatusLock) {
+            log.error "Lost connection to Web Socket: ${message}"
+            setWebSocketStatus(false)
+        }
     }
     else {
-        log.error "web socket status: ${message}"
-        setWebSocketStatus(false)
+        synchronized (socketStatusLock) {
+            log.error "web socket status: ${message}"
+            setWebSocketStatus(false)\
+        }
     }
 }
 
@@ -228,6 +244,7 @@ def sendWSMessage(valveState,device_id,zone,run_time) {
     else {
         msg.stations = []
     }
+    log.debug "Sending: ${msg}"
     safeWSSend(msg)
 }
 
@@ -255,6 +272,5 @@ def setWebSocketStatus(status) {
 }
 
 def isWebSocketOpen() {
-    log.debug "Statuses: ${state.webSocketOpen} ${getDataValue("webSocketOpen")} ${webSocketOpen}"
     return state.webSocketOpen &&  webSocketOpen && getDataValue("webSocketOpen") == "true"
 }
