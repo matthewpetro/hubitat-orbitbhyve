@@ -20,8 +20,9 @@ import groovy.transform.Field
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 
-@Field String wsHost = "wss://api.orbitbhyve.com/v1/events"
-@Field String timeStampFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
+@Field static String wsHost = "wss://api.orbitbhyve.com/v1/events"
+@Field static String timeStampFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
+@Field static boolean webSocketOpen = false
 
 metadata {
     definition (name: "Orbit Bhyve Sprinkler Timer", namespace: "kurtsanders", author: "kurt@kurtsanders.com") {
@@ -54,9 +55,7 @@ def refresh() {
 }
 
 def installed() {
-    state.webSocketOpen = false
-    updateDataValue("webSocketOpen", "false")
-    log.debug "${state.webSocketOpen}"
+    setWebSocketStatus(false)
     state.retryCount = 0
     state.nextRetry = 0
     sendEvent(name: "valve", value: "closed")
@@ -83,7 +82,7 @@ def close() {
 }
 
 def safeWSSend(obj) {
-    if (state.webSocketOpen == false) {
+    if (!isWebSocketOpen()) {
         try {
             interfaces.webSocket.close()
         }
@@ -91,7 +90,7 @@ def safeWSSend(obj) {
 
         }
         if (state.nextRetry == 0 || now() >= state.nextRetry) {
-            parent.debugVerbose "Reconnecting to Web Socket"
+            log.debug "Reconnecting to Web Socket"
             state.retryCount++
             if (state.retryCount == 1)
                 parent.OrbitBhyveLogin()
@@ -114,15 +113,13 @@ def safeWSSend(obj) {
 def initialize() {
     if (getDataValue("master") == "true") {
         try {
-            state.webSocketOpen = false
-            updateDataValue("webSocketOpen", "false")
-            log.debug "${state.webSocketOpen}"
+            setWebSocketStatus(false)
             interfaces.webSocket.close()
         }
         catch (e) {
             
         }
-        parent.debugVerbose "Connecting to Web Socket"
+        log.debug "Connecting to Web Socket"
         interfaces.webSocket.connect(wsHost)
     }
 }
@@ -182,9 +179,7 @@ def parse(String message) {
 
 def webSocketStatus(String message) {
     if (message == "status: open") {
-        state.webSocketOpen = true
-        updateDataValue("webSocketOpen", "true")
-        log.debug "${state.webSocketOpen}"
+        setWebSocketStatus(true)
         state.webSocketOpenTime = now()
         def loginMsg = [
             event: "app_connection",
@@ -202,20 +197,15 @@ def webSocketStatus(String message) {
     }
     else if (message == "status: closing") {
         log.error "Lost connection to Web Socket: ${message}"
-        state.webSocketOpen = false
-        updateDataValue("webSocketOpen", "false")
-        log.debug "${state.webSocketOpen}"
+        setWebSocketStatus(false)
     }
     else if (message.startsWith("failure:")) {
         log.error "Lost connection to Web Socket: ${message}"
-        state.webSocketOpen = false
-        updateDataValue("webSocketOpen", "false")
-        log.debug "${state.webSocketOpen}"
+        setWebSocketStatus(false)
     }
     else {
         log.error "web socket status: ${message}"
-        state.webSocketOpen = false
-        updateDataValue("webSocketOpen", "false")
+        setWebSocketStatus(false)
     }
 }
 
@@ -254,4 +244,17 @@ def pingWebSocket() {
 def getTimestamp() {
     def date = new Date()
     return date.format(timeStampFormat, TimeZone.getTimeZone('UTC'))
+}
+
+def setWebSocketStatus(status) {
+    log.debug "Old statuses: ${state.webSocketOpen} ${getDataValue("webSocketOpen")} ${webSocketOpen}"
+    state.webSocketOpen = status
+    updateDataValue("webSocketOpen", status.toString())
+    webSocketOpen = status
+    log.debug "New statuses: ${state.webSocketOpen} ${getDataValue("webSocketOpen")} ${webSocketOpen}"
+}
+
+def isWebSocketOpen() {
+    log.debug "Open? ${state.webSocketOpen && !webSocketOpen && getDataValue("webSocketOpen") == "true"}"
+    return state.webSocketOpen &&  webSocketOpen && getDataValue("webSocketOpen") == "true"
 }
