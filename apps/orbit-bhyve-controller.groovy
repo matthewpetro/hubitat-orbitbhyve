@@ -224,10 +224,27 @@ def updateTiles(data) {
                     station = zoneData.station
                     scheduled_auto_on = true
                     d = getChildDevice("${DTHDNI(it.id)}:${station}")
-                    infoVerbose "Processing Orbit Sprinkler Device: '${it.name}', Orbit Station #${station}, Zone Name: '${zoneData.name}'"
-
-                    def byhveValveState = it.status.watering_status ? "open" : "closed"
-                    d.sendEvent(name:"valve", value: byhveValveState)
+                    infoVerbose "Processing Orbit Sprinkler Device: '${it.name}', Orbit Station #${station}, Zone Name: '${zoneData.name}'} ${it?.status?.watering_status}"
+                    
+                    
+                    if (it.status.watering_status) {
+                        for (valveDevice in getValveDevices()) {
+                            def deviceStationId = getStationFromDNI(valveDevice.deviceNetworkId)
+                            if (it.status.watering_status.stations.find { s -> s.station.toInteger() == deviceStationId.toInteger()}) {
+                                log.debug "Opening station ${deviceStationId}"
+                                valveDevice.sendEvent(name:"valve", value: "open")
+                            }
+                            else {
+                                log.debug "Closed station ${deviceStationId}"
+                                valveDevice.sendEvent(name:"valve", value: "closed")
+                            }
+                        }
+                    }
+                    else {
+                        log.debug "Setting all to closed, not running"
+                        getValveDevices().each {it.sendEvent(name:"valve", value: "closed") }
+                    }
+                    
 					def presetWateringInt = it.manual_preset_runtime_sec.toInteger()/60
                     d.sendEvent(name:"preset_runtime", value: presetWateringInt)
                     d.sendEvent(name:"manual_preset_runtime_min", value: presetWateringInt)
@@ -629,6 +646,14 @@ Map OrbitBhyveLoginHeaders() 	{
     return [
         'orbit-app-id':'Orbit Support Dashboard'
     ]
+}
+
+def getValveDevices() {
+    return getChildDevices().findAll { it.hasCapability("Valve") == true }
+}
+
+def getStationFromDNI(dni) {
+    dni?.split(':')[1]
 }
 
 // ======= Push Routines ============

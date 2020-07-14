@@ -136,11 +136,13 @@ def parse(String message) {
 
     switch (payload.event) {
         case "watering_in_progress_notification":
+        log.debug "Watering started: ${payload}"
             def dev = parent.getDeviceByIdAndStation(payload.device_id, payload.current_station)
             if (dev)
                 dev.sendEvent(name: "valve", value: "open")
             break
         case "watering_complete":
+        log.debug "Watering complete: ${payload}"
             def dev = parent.getDeviceById(payload.device_id)
             if (dev) 
                 dev.sendEvent(name: "valve", value: "closed")
