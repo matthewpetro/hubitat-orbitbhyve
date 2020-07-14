@@ -224,7 +224,7 @@ def updateTiles(data) {
                     station = zoneData.station
                     scheduled_auto_on = true
                     d = getChildDevice("${DTHDNI(it.id)}:${station}")
-                    infoVerbose "Processing Orbit Sprinkler Device: '${it.name}', Orbit Station #${station}, Zone Name: '${zoneData.name}'} ${it?.status?.watering_status}"
+                    infoVerbose "Processing Orbit Sprinkler Device: '${it.name}', Orbit Station #${station}, Zone Name: '${zoneData.name} ${it?.status?.watering_status}"
                     
                     
                     if (it.status.watering_status) {
