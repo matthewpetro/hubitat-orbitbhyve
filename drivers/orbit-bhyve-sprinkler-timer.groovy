@@ -85,7 +85,6 @@ def close() {
 def safeWSSend(obj, retry) {
     synchronized (socketStatusLock) {
         if (!isWebSocketOpen()) {
-            log.debug "Asked to send a message but the socket is closed"
             try {
                 interfaces.webSocket.close()
             }
@@ -267,13 +266,10 @@ def getTimestamp() {
 }
 
 def setWebSocketStatus(status) {
-    log.debug "Old statuses: ${state.webSocketOpen} ${getDataValue("webSocketOpen")} ${webSocketOpen}"
-    state.webSocketOpen = status
-    updateDataValue("webSocketOpen", status.toString())
     webSocketOpen = status
-    log.debug "New statuses: ${state.webSocketOpen} ${getDataValue("webSocketOpen")} ${webSocketOpen}"
+    log.debug "New statuses: ${webSocketOpen}"
 }
 
 def isWebSocketOpen() {
-    return state.webSocketOpen &&  webSocketOpen && getDataValue("webSocketOpen") == "true"
+    return webSocketOpen 
 }

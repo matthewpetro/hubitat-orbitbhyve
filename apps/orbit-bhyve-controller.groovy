@@ -241,7 +241,6 @@ def updateTiles(data) {
                         }
                     }
                     else {
-                        log.debug "Setting all to closed, not running"
                         getValveDevices().each {it.sendEvent(name:"valve", value: "closed") }
                     }
                     
