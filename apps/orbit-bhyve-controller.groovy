@@ -228,15 +228,30 @@ def updateTiles(data) {
                     
                     
                     if (it.status.watering_status) {
-                        for (valveDevice in getValveDevices()) {
-                            def deviceStationId = getStationFromDNI(valveDevice.deviceNetworkId)
-                            if (it.status.watering_status.stations.find { s -> s.station.toInteger() == deviceStationId.toInteger()}) {
-                                log.debug "Opening station ${deviceStationId}"
-                                valveDevice.sendEvent(name:"valve", value: "open")
+                        if (it.status.watering_status.stations != null) {
+                            for (valveDevice in getValveDevices()) {
+                                def deviceStationId = getStationFromDNI(valveDevice.deviceNetworkId)
+                                if (it.status.watering_status.stations.find { s -> s.station.toInteger() == deviceStationId.toInteger()}) {
+                                    log.debug "Opening station ${deviceStationId}"
+                                    valveDevice.sendEvent(name:"valve", value: "open")
+                                }
+                                else {
+                                    log.debug "Closed station ${deviceStationId}"
+                                    valveDevice.sendEvent(name:"valve", value: "closed")
+                                }
                             }
-                            else {
-                                log.debug "Closed station ${deviceStationId}"
-                                valveDevice.sendEvent(name:"valve", value: "closed")
+                        }
+                        else {
+                            for (valveDevice in getValveDevices()) {
+                                def deviceStationId = getStationFromDNI(valveDevice.deviceNetworkId)
+                                if (it.status.watering_status.current_station.toInteger() == deviceStationId.toInteger()) {
+                                    log.debug "Opening station ${deviceStationId}"
+                                    valveDevice.sendEvent(name:"valve", value: "open")
+                                }
+                                else {
+                                    log.debug "Closed station ${deviceStationId}"
+                                    valveDevice.sendEvent(name:"valve", value: "closed")
+                                }
                             }
                         }
                     }
@@ -244,9 +259,11 @@ def updateTiles(data) {
                         getValveDevices().each {it.sendEvent(name:"valve", value: "closed") }
                     }
                     
-					def presetWateringInt = it.manual_preset_runtime_sec.toInteger()/60
-                    d.sendEvent(name:"preset_runtime", value: presetWateringInt)
-                    d.sendEvent(name:"manual_preset_runtime_min", value: presetWateringInt)
+                    if (it.manual_preset_runtime_sec != null) {
+                        def presetWateringInt = it.manual_preset_runtime_sec.toInteger()/60
+                        d.sendEvent(name:"preset_runtime", value: presetWateringInt)
+                        d.sendEvent(name:"manual_preset_runtime_min", value: presetWateringInt)
+                    }
                     d.sendEvent(name:"rain_delay", value: it.status.rain_delay)
                     d.sendEvent(name:"run_mode", value: it.status.run_mode)
                     d.sendEvent(name:"station", value: station)
