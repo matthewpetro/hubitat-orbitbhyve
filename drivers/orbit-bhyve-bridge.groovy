@@ -1,6 +1,6 @@
 /*
 *  Name:	Orbit B•Hyve™ Bridge
-*  Author: Kurt Sanders
+*  Author: Kurt Sanders & Dominick Meglio
 *  Email:	Kurt@KurtSanders.com
 *  Date:	3/2019
 *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except

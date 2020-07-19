@@ -1,6 +1,6 @@
 /*
 *  Name:	Orbit B•Hyve™ Sprinler Timer
-*  Author: Kurt Sanders
+*  Author: Kurt Sanders & Dominick Meglio
 *  Email:	Kurt@KurtSanders.com
 *  Date:	3/2019
 *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
@@ -46,7 +46,7 @@ metadata {
         attribute "start_times", "string"
         attribute "station", "string"
         attribute "scheduled_auto_on", "bool"
-        attribute "water_volume_gal", "number"
+        attribute "last_watering_volume", "number"
         attribute "water_flow_rate", "number"
     }
 }
@@ -92,10 +92,9 @@ def safeWSSend(obj, retry) {
 
             }
             if (state.nextRetry == 0 || now() >= state.nextRetry) {
-                log.debug "Reconnecting to Web Socket"
+                logDebug "Reconnecting to Web Socket"
                 state.retryCount++
-                if (state.retryCount == 1)
-                    parent.OrbitBhyveLogin()
+    
                 state.nextRetry = now() + (30000*((state.retryCount < 10) ? state.retryCount : 10))
                 interfaces.webSocket.connect(wsHost)
                 if (retry)
@@ -124,7 +123,7 @@ def initialize() {
             catch (e) {
                 
             }
-            log.debug "Connecting to Web Socket"
+            logDebug "Connecting to Web Socket"
             interfaces.webSocket.connect(wsHost)
         }
     }
@@ -135,16 +134,16 @@ def parse(String message) {
 
     switch (payload.event) {
         case "watering_in_progress_notification":
-        log.debug "Watering started: ${payload}"
             def dev = parent.getDeviceByIdAndStation(payload.device_id, payload.current_station)
-            if (dev)
+            if (dev) {
+                dev.sendEvent(name: "last_watering_volume", value: 0, unit: "gal")
                 dev.sendEvent(name: "valve", value: "open")
             break
         case "watering_complete":
-        log.debug "Watering complete: ${payload}"
             def dev = parent.getDeviceById(payload.device_id)
             if (dev) 
                 dev.sendEvent(name: "valve", value: "closed")
+            parent.refreshLastWateringAmount(payload.device_id)
             break
         case "change_mode":
             if (payload.stations != null) {
@@ -169,6 +168,7 @@ def parse(String message) {
             parent.triggerLowBattery(device)
             break
         case "flow_sensor_state_changed":
+            log.debug payload
             def dev = parent.getDeviceById(payload.device_id)
             if (dev)
                 dev.sendEvent(name: "water_flow_rate", value: payload.flow_rate_gpm)
@@ -188,7 +188,7 @@ def parse(String message) {
 def webSocketStatus(String message) {
     if (message == "status: open") {
         synchronized (socketStatusLock) {
-            log.debug "Reconnect successful"
+            logDebug "Reconnect successful"
             setWebSocketStatus(true)
             state.webSocketOpenTime = now()
             def loginMsg = [
@@ -201,28 +201,28 @@ def webSocketStatus(String message) {
         }
         pauseExecution(1000)
         if (state.retryCommand != null) {
-            log.debug "Retrying command from before connection lost ${state.retryCommand}"
+            logDebug "Retrying command from before connection lost ${state.retryCommand}"
             interfaces.webSocket.sendMessage(state.retryCommand)
             state.retryCommand = null
         }
-        schedule("0/30 * * * * ? *", pingWebSocket)
+        schedule("0/25 * * * * ? *", pingWebSocket)
     }
     else if (message == "status: closing") {
         synchronized (socketStatusLock) {
-            log.error "Lost connection to Web Socket: ${message}"
+            log.error "Lost connection to Web Socket: ${message}, will reconnect."
             setWebSocketStatus(false)
         }
     }
     else if (message.startsWith("failure:")) {
         synchronized (socketStatusLock) {
-            log.error "Lost connection to Web Socket: ${message}"
+            log.error "Lost connection to Web Socket: ${message}, will reconnect."
             setWebSocketStatus(false)
         }
     }
     else {
         synchronized (socketStatusLock) {
-            log.error "web socket status: ${message}"
-            setWebSocketStatus(false)\
+            log.error "Websocket status: ${message}, will reconnect."
+            setWebSocketStatus(false)
         }
     }
 }
@@ -246,13 +246,12 @@ def sendWSMessage(valveState,device_id,zone,run_time) {
     else {
         msg.stations = []
     }
-    log.debug "Sending: ${msg}"
     safeWSSend(msg, true)
 }
 
 def pingWebSocket() {
     if (now()-(30*60*1000) >= state.webSocketOpenTime) {
-        parent.debugVerbose "WebSocket has been open for 30 minutes, reconnecting"
+        logDebug "WebSocket has been open for 30 minutes, reconnecting"
         initialize()
         return
     }
@@ -267,9 +266,13 @@ def getTimestamp() {
 
 def setWebSocketStatus(status) {
     webSocketOpen = status
-    log.debug "New statuses: ${webSocketOpen}"
 }
 
 def isWebSocketOpen() {
     return webSocketOpen 
+}
+
+def logDebug(msg) {
+    if (parent.isDebugLogEnabled())
+        log.debug msg
 }

@@ -1,6 +1,7 @@
 /*
 * Orbit™ B•Hyve™ Controller
 * 2019 (c) SanderSoft™
+* 2020 (c) Dominick Meglio (Hubitat port and significant rewrites)
 *
 * Author:   Kurt Sanders
 * Email:	Kurt@KurtSanders.com
@@ -26,13 +27,13 @@ import groovy.time.TimeCategory
 definition(
     name: 		"Orbit Bhyve Controller",
     namespace: 	"kurtsanders",
-    author: 	"Kurt@KurtSanders.com",
+    author: 	"Kurt@KurtSanders.com & Dominick Meglio",
     description:"Control and monitor your network connected Orbit™ Bhyve Timer anywhere via Hubitat",
     category: 	"My Apps",
     iconUrl: 	"",
     iconX2Url: 	"",
     iconX3Url: 	"",
-    singleInstance: false
+    singleInstance: true
 )
 preferences {
     page(name:"mainMenu")
@@ -78,8 +79,7 @@ def mainOptions() {
             href(name: "Push Notification Options",
                  title: "Push Notification Options",
                  page: "notificationOptions",
-                 description: "Notification Options",
-                 defaultValue: "Tap to Select Notification Options")
+                 description: "Tap to Select Notification Options")
         }
         section(hideable: true, hidden: true, "Logging Settings") {
             input name: "logDebugMsgs", type: "bool", title: "Log debug messages"
@@ -161,8 +161,20 @@ def is_connectedHandler(evt) {
         send_message("The ${evt.linkText}'s WiFi Online Status is now ${evt.value?'Online':'Offline'} at ${timestamp()}")
 }
 
+def refreshLastWateringAmount(device_id) {
+    def mostRecentWatering = OrbitGet('watering_events', device_id)[0]
+
+    if (mostRecentWatering) {
+        def latestIrrigation = mostRecentWatering.irrigation[-1] ?: null
+        if (latestIrrigation) {
+            def wateringEventStationDev = getDeviceByIdAndStation(device_id, latestIrrigation.station)
+            wateringEventStationDev.sendEvent(name: "last_watering_volume", value: latestIrrigation.water_volume_gal?:0, unit: "gal")
+        }
+    }
+}
+
 def refresh() {
-    debugVerbose("Executing Refresh Routine at ${timestamp()}")
+    debugVerbose "Executing Refresh Routine at ${timestamp()}"
     main()
 }
 
@@ -174,12 +186,8 @@ def main() {
 }
 
 def updateTiles(data) {
-    debugVerbose("Executing updateTiles(data) started...")
+    infoVerbose "Executing updateTiles(data) started..."
     def d
-    def started_watering_station_at
-    def watering_events
-    def watering_volume_gal
-    def wateringTimeLeft
     def zoneData
     def zone
     def zones
@@ -192,7 +200,7 @@ def updateTiles(data) {
         def deviceType = it.type
         switch (deviceType) {
             case 'bridge':
-                infoVerbose "Procesing Orbit Bridge: '${it.name}'"
+                infoVerbose "Processing Orbit Bridge: '${it.name}'"
                 zone = 0
                 zones = 1
                 break
@@ -224,19 +232,18 @@ def updateTiles(data) {
                     station = zoneData.station
                     scheduled_auto_on = true
                     d = getChildDevice("${DTHDNI(it.id)}:${station}")
-                    infoVerbose "Processing Orbit Sprinkler Device: '${it.name}', Orbit Station #${station}, Zone Name: '${zoneData.name} ${it?.status?.watering_status}"
-                    
+                    infoVerbose "Processing Orbit Sprinkler Device: '${it.name}', Orbit Station #${station}, Zone Name: '${zoneData.name}'"
                     
                     if (it.status.watering_status) {
                         if (it.status.watering_status.stations != null) {
                             for (valveDevice in getValveDevices()) {
                                 def deviceStationId = getStationFromDNI(valveDevice.deviceNetworkId)
                                 if (it.status.watering_status.stations.find { s -> s.station.toInteger() == deviceStationId.toInteger()}) {
-                                    log.debug "Opening station ${deviceStationId}"
+                                    debugVerbose "Opening station ${deviceStationId}"
                                     valveDevice.sendEvent(name:"valve", value: "open")
                                 }
                                 else {
-                                    log.debug "Closed station ${deviceStationId}"
+                                    debugVerbose "Closed station ${deviceStationId}"
                                     valveDevice.sendEvent(name:"valve", value: "closed")
                                 }
                             }
@@ -245,11 +252,11 @@ def updateTiles(data) {
                             for (valveDevice in getValveDevices()) {
                                 def deviceStationId = getStationFromDNI(valveDevice.deviceNetworkId)
                                 if (it.status.watering_status.current_station.toInteger() == deviceStationId.toInteger()) {
-                                    log.debug "Opening station ${deviceStationId}"
+                                    debugVerbose "Opening station ${deviceStationId}"
                                     valveDevice.sendEvent(name:"valve", value: "open")
                                 }
                                 else {
-                                    log.debug "Closed station ${deviceStationId}"
+                                    debugVerbose "Closed station ${deviceStationId}"
                                     valveDevice.sendEvent(name:"valve", value: "closed")
                                 }
                             }
@@ -356,25 +363,10 @@ def updateTiles(data) {
                         else
                             d.sendEvent(name:"programs", value: "${zoneData.name} Programs\n${it.name}: None")
                     }
-                    // Watering Events
-                    watering_events = OrbitGet('watering_events', it.id)[0]
-                    if (watering_events) {
-                        watering_events.irrigation = watering_events.irrigation[-1]?:0
-
-                        if (byhveValveState == 'open') {
-                            def water_volume_gal = watering_events.irrigation.water_volume_gal?:0
-                            started_watering_station_at = convertDateTime(it.status.watering_status.started_watering_station_at)
-                            d.sendEvent(name:"water_volume_gal", value: water_volume_gal, descriptionText:"${water_volume_gal} gallons")
-                        } 
-                        else
-                            d.sendEvent(name:"water_volume_gal", value: 0, descriptionText:"gallons")
-                    } 
-                    else
-                        d.sendEvent(name:"water_volume_gal"	, value: 0, descriptionText:"gallons")
                 }
             } 
             else
-                log.error "Invalid Orbit Device ID: '${it.id}'. If you have added a NEW bhyve device, you must rerun the SmartApp setup to create a SmartThings device"
+                log.error "Invalid Orbit Device ID: '${it.id}'. If you have added a NEW bhyve device, you must rerun the App setup to create a device"
         }
     }
 }
@@ -653,9 +645,24 @@ def convertDateTime(dt) {
     return rc.format('EEE MMM d, h:mm a', timezone).replace("AM", "am").replace("PM","pm")
 }
 
+
+def debugVerbose(String message) {
+    if (logDebugMsgs) {
+        log.debug "${message}"
+    }
+}
+
+def infoVerbose(String message) {
+    if (logInfoMsgs) {
+        log.info "${message}"
+    }
+}
+
+def isDebugLogEnabled() {
+    return logDebugMsgs
+}
+
 // Constant Declarations
-def debugVerbose(String message) {if (logDebugMsgs){log.debug "${message}"}}
-def infoVerbose(String message)  {if (logInfoMsgs){log.info "${message}"}}
 String DTHDNI(id) 					{(id.startsWith('bhyve'))?id:"bhyve-${app.id}-${id}"}
 String DTHName(type) 			{ return "Orbit Bhyve ${type}" }
 Map OrbitBhyveLoginHeaders() 	{
