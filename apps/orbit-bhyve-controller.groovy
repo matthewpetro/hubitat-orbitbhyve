@@ -239,12 +239,16 @@ def updateTiles(data) {
                             for (valveDevice in getValveDevices()) {
                                 def deviceStationId = getStationFromDNI(valveDevice.deviceNetworkId)
                                 if (it.status.watering_status.stations.find { s -> s.station.toInteger() == deviceStationId.toInteger()}) {
-                                    debugVerbose "Opening station ${deviceStationId}"
-                                    valveDevice.sendEvent(name:"valve", value: "open")
+                                    if (valveDevice.currentValue("valve") != "open") {
+                                        debugVerbose "Opening station ${deviceStationId}"
+                                        valveDevice.sendEvent(name:"valve", value: "open")
+                                    }
                                 }
                                 else {
-                                    debugVerbose "Closed station ${deviceStationId}"
-                                    valveDevice.sendEvent(name:"valve", value: "closed")
+                                    if (valveDevice.currentValue("valve") !="closed") {
+                                        debugVerbose "Closed station ${deviceStationId}"
+                                        valveDevice.sendEvent(name:"valve", value: "closed")
+                                    }
                                 }
                             }
                         }
@@ -252,18 +256,26 @@ def updateTiles(data) {
                             for (valveDevice in getValveDevices()) {
                                 def deviceStationId = getStationFromDNI(valveDevice.deviceNetworkId)
                                 if (it.status.watering_status.current_station.toInteger() == deviceStationId.toInteger()) {
-                                    debugVerbose "Opening station ${deviceStationId}"
-                                    valveDevice.sendEvent(name:"valve", value: "open")
+                                    if (valveDevice.currentValue("valve") != "open") {
+                                        debugVerbose "Opening station ${deviceStationId}"
+                                        valveDevice.sendEvent(name:"valve", value: "open")
+                                    }
                                 }
                                 else {
-                                    debugVerbose "Closed station ${deviceStationId}"
-                                    valveDevice.sendEvent(name:"valve", value: "closed")
+                                    if (valveDevice.currentValue("valve") != "closed") {
+                                        debugVerbose "Closed station ${deviceStationId}"
+                                        valveDevice.sendEvent(name:"valve", value: "closed")
+                                    }
                                 }
                             }
                         }
                     }
                     else {
-                        getValveDevices().each {it.sendEvent(name:"valve", value: "closed") }
+
+                        getValveDevices().each {
+                            if (it.currentValue("valve") != "closed")
+                                it.sendEvent(name:"valve", value: "closed") 
+                        }
                     }
                     
                     if (it.manual_preset_runtime_sec != null) {
