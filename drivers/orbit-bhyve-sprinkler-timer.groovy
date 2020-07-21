@@ -138,6 +138,7 @@ def parse(String message) {
             if (dev) {
                 dev.sendEvent(name: "last_watering_volume", value: 0, unit: "gal")
                 dev.sendEvent(name: "valve", value: "open")
+            }
             break
         case "watering_complete":
             def dev = parent.getDeviceById(payload.device_id)
