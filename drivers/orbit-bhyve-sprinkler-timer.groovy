@@ -142,8 +142,10 @@ def parse(String message) {
                 synchronized (wateringLock) {
                     dev.sendEvent(name: "valve", value: "open")
                     for (valveDevice in parent.getValveDevices()) {
-                        if (valveDevice.deviceNetworkId != dev.deviceNetworkId && valveDevice.currentValue("valve") == "open")
-                            dev.sendEvent(name: "valve", value: "closed")
+                        if (valveDevice.deviceNetworkId != dev.deviceNetworkId && valveDevice.currentValue("valve") == "open") {
+                            parent.debugVerbose "Closing ${valveDevice.deviceNetworkId} because station ${payload.current_station} opened"
+                            valveDevice.sendEvent(name: "valve", value: "closed")
+                        }
                     }
                 }
             }
