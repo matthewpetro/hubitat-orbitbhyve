@@ -50,6 +50,10 @@ metadata {
         attribute "last_watering_volume", "number"
         attribute "water_flow_rate", "number"
     }
+
+    preferences {
+        input "presetRunTime", "number", title: "How many minutes should the valve remain open?", defaultValue: 10, displayDuringSetup: false, required: false
+    }
 }
 
 def refresh() {
@@ -76,11 +80,13 @@ def uninstalled() {
 }
 
 def open() {
-    parent.sendRequest('open', parent.getOrbitDeviceIdFromDNI(device.deviceNetworkId), device.latestValue('station'),device.latestValue('preset_runtime') )
+    def runTime = presetRunTime ?: device.latestValue('preset_runtime') ?: 10
+    parent.sendRequest('open', parent.getOrbitDeviceIdFromDNI(device.deviceNetworkId), device.latestValue('station'), runTime)
 }
 
 def close() {
-    parent.sendRequest('close', parent.getOrbitDeviceIdFromDNI(device.deviceNetworkId), device.latestValue('station'),device.latestValue('preset_runtime') )
+    def runTime = presetRunTime ?: device.latestValue('preset_runtime') ?: 10
+    parent.sendRequest('close', parent.getOrbitDeviceIdFromDNI(device.deviceNetworkId), device.latestValue('station'), runTime)
 }
 
 def safeWSSend(obj, retry) {
