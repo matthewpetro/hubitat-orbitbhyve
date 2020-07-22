@@ -164,9 +164,9 @@ def is_connectedHandler(evt) {
 def refreshLastWateringAmount(device_id) {
     def mostRecentWatering = OrbitGet('watering_events', device_id)[0]
 
-    if (mostRecentWatering) {
+    if (mostRecentWatering != null) {
         def latestIrrigation = mostRecentWatering.irrigation[-1] ?: null
-        if (latestIrrigation) {
+        if (latestIrrigation != null) {
             def wateringEventStationDev = getDeviceByIdAndStation(device_id, latestIrrigation.station)
             wateringEventStationDev.sendEvent(name: "last_watering_volume", value: latestIrrigation.water_volume_gal?:0, unit: "gal")
         }
@@ -709,7 +709,7 @@ def getApiToken() {
 }
 
 def getDeviceById(deviceId) {
-    return getChildDevices().find { getOrbitDeviceIdFromDNI(it.deviceNetworkId) == deviceId }
+    return getChildDevices().findAll { getOrbitDeviceIdFromDNI(it.deviceNetworkId) == deviceId }
 }
 
 def getDeviceByIdAndStation(deviceId, station) {

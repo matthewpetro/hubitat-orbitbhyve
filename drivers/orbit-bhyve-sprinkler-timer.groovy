@@ -24,6 +24,7 @@ import groovy.json.JsonSlurper
 @Field static String timeStampFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
 @Field static boolean webSocketOpen = false
 @Field static Object socketStatusLock = new Object()
+@Field static Object wateringLock = new Object()
 
 metadata {
     definition (name: "Orbit Bhyve Sprinkler Timer", namespace: "kurtsanders", author: "kurt@kurtsanders.com") {
@@ -138,14 +139,25 @@ def parse(String message) {
             def dev = parent.getDeviceByIdAndStation(payload.device_id, payload.current_station)
             if (dev) {
                 dev.sendEvent(name: "last_watering_volume", value: 0, unit: "gal")
-                dev.sendEvent(name: "valve", value: "open")
+                synchronized (wateringLock) {
+                    dev.sendEvent(name: "valve", value: "open")
+                    for (valveDevice in parent.getValveDevices()) {
+                        if (valveDevice.deviceNetworkId != dev.deviceNetworkId && valveDevice.currentValue("valve") == "open")
+                            dev.sendEvent(name: "valve", value: "closed")
+                    }
+                }
             }
             break
+        case "device_idle":
         case "watering_complete":
             parent.debugVerbose "Watering Complete: ${payload}"
+            
             def dev = parent.getDeviceById(payload.device_id)
-            if (dev) 
-                dev.sendEvent(name: "valve", value: "closed")
+            if (dev) {
+                synchronized (wateringLock) {
+                    dev*.sendEvent(name: "valve", value: "closed")
+                }
+            }
             parent.refreshLastWateringAmount(payload.device_id)
             break
         case "change_mode":
@@ -159,26 +171,31 @@ def parse(String message) {
             else {
                 def dev = parent.getDeviceById(payload.device_id)
                 if (dev)
-                    dev.sendEvent(name: "run_mode", value: payload.mode)
+                    dev*.sendEvent(name: "run_mode", value: payload.mode)
             }
             break
         case "rain_delay":
             def dev = parent.getDeviceById(payload.device_id)
             if (dev)
-                dev.sendEvent(name: "rain_delay", value: payload.delay)
+                dev*.sendEvent(name: "rain_delay", value: payload.delay)
             break
         case "low_battery":
             parent.triggerLowBattery(device)
             break
         case "flow_sensor_state_changed":
-            log.debug payload
             def dev = parent.getDeviceById(payload.device_id)
             if (dev)
-                dev.sendEvent(name: "water_flow_rate", value: payload.flow_rate_gpm)
+                dev*.sendEvent(name: "water_flow_rate", value: payload.flow_rate_gpm)
+            break
+        case "set_manual_preset_time":
+            def presetWateringInt = payload.seconds.toInteger()/60
+            def dev = parent.getDeviceById(payload.device_id)
+            if (dev) {
+                dev*.sendEvent(name:"preset_runtime", value: presetWateringInt)
+                dev*.sendEvent(name:"manual_preset_runtime_min", value: presetWateringInt)
+            }
             break
         case "program_changed":
-            // TODO figure this out
-            break
         case "device_idle":
         case "clear_low_battery":
             // Do nothing
