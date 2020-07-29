@@ -147,7 +147,7 @@ def parse(String message) {
                 dev.sendEvent(name: "last_watering_volume", value: 0, unit: "gal")
                 synchronized (wateringLock) {
                     dev.sendEvent(name: "valve", value: "open")
-                    for (valveDevice in parent.getValveDevices()) {
+                    for (valveDevice in parent.getValveDevices(payload.device_id)) {
                         if (valveDevice.deviceNetworkId != dev.deviceNetworkId && valveDevice.currentValue("valve") == "open") {
                             parent.debugVerbose "Closing ${valveDevice.deviceNetworkId} because station ${payload.current_station} opened"
                             valveDevice.sendEvent(name: "valve", value: "closed")

@@ -236,7 +236,7 @@ def updateTiles(data) {
                     
                     if (it.status.watering_status) {
                         if (it.status.watering_status.stations != null) {
-                            for (valveDevice in getValveDevices()) {
+                            for (valveDevice in getValveDevices(it.id)) {
                                 def deviceStationId = getStationFromDNI(valveDevice.deviceNetworkId)
                                 if (it.status.watering_status.stations.find { s -> s.station.toInteger() == deviceStationId.toInteger()}) {
                                     if (valveDevice.currentValue("valve") != "open") {
@@ -253,7 +253,7 @@ def updateTiles(data) {
                             }
                         }
                         else {
-                            for (valveDevice in getValveDevices()) {
+                            for (valveDevice in getValveDevices(it.id)) {
                                 def deviceStationId = getStationFromDNI(valveDevice.deviceNetworkId)
                                 if (it.status.watering_status.current_station.toInteger() == deviceStationId.toInteger()) {
                                     if (valveDevice.currentValue("valve") != "open") {
@@ -272,7 +272,7 @@ def updateTiles(data) {
                     }
                     else {
 
-                        getValveDevices().each {
+                        getValveDevices(it.id).each {
                             if (it.currentValue("valve") != "closed")
                                 it.sendEvent(name:"valve", value: "closed") 
                         }
@@ -683,14 +683,17 @@ Map OrbitBhyveLoginHeaders() 	{
     ]
 }
 
-def getValveDevices() {
-    return getChildDevices().findAll { it.hasCapability("Valve") == true }
+def getValveDevices(id) {
+    return getChildDevices().findAll { it.hasCapability("Valve") == true && getDeviceIdFromDNI(it.deviceNetworkId) == id}
 }
 
 def getStationFromDNI(dni) {
     dni?.split(':')[1]
 }
 
+def getDeviceIdFromDNI(dni) {
+    dni?.split('-')[2]?.split(':')[0]
+}
 // ======= Push Routines ============
 
 def send_message(String msgData) {
