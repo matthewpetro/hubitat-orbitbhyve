@@ -49,6 +49,8 @@ metadata {
         attribute "scheduled_auto_on", "bool"
         attribute "last_watering_volume", "number"
         attribute "water_flow_rate", "number"
+
+        command "setRainDelay", ["number"]
     }
 
     preferences {
@@ -87,6 +89,18 @@ def open() {
 def close() {
     def runTime = presetRunTime ?: device.latestValue('preset_runtime') ?: 10
     parent.sendRequest('close', parent.getOrbitDeviceIdFromDNI(device.deviceNetworkId), device.latestValue('station'), runTime)
+}
+
+def setRainDelay(hours) {
+    parent.sendRainDelay(parent.getOrbitDeviceIdFromDNI(device.deviceNetworkId), hours)
+}
+
+def sendRainDelay(device_id, hours) {
+    safeWSSend([
+        event: "rain_delay",
+        device_id: device_id,
+        delay: hours
+    ], true)
 }
 
 def safeWSSend(obj, retry) {
@@ -155,6 +169,16 @@ def parse(String message) {
                     }
                 }
             }
+            break
+        case "device_disconnected":
+            def dev = parent.getDeviceById(payload.device_id)
+            if (dev) 
+                dev*.sendEvent(name: "is_connected", value: false)               
+            break
+        case "device_connected":
+            def dev = parent.getDeviceById(payload.device_id)
+            if (dev) 
+                dev*.sendEvent(name: "is_connected", value: true)               
             break
         case "device_idle":
         case "watering_complete":

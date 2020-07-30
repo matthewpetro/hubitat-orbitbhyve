@@ -138,6 +138,11 @@ def findMasterDevice() {
     }
 }
 
+def sendRainDelay(device_id, hours) {
+    def bhyveHub = findMasterDevice()
+    bhyveHub?.sendRainDelay(device_id, hours)
+}
+
 def sendRequest(valveState, device_id, zone, run_time) {
     def bhyveHub = findMasterDevice()
     bhyveHub?.sendWSMessage(valveState, device_id, zone, run_time)
