@@ -251,6 +251,7 @@ def webSocketStatus(String message) {
             
             interfaces.webSocket.sendMessage(new JsonOutput().toJson(loginMsg))
         }
+        parent.refresh()
         pauseExecution(1000)
         if (state.retryCommand != null) {
             logDebug "Retrying command from before connection lost ${state.retryCommand}"
