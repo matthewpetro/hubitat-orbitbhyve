@@ -49,8 +49,11 @@ metadata {
         attribute "scheduled_auto_on", "bool"
         attribute "last_watering_volume", "number"
         attribute "water_flow_rate", "number"
+        attribute "stop_time", "number"
+        attribute "start_time", "number"
 
         command "setRainDelay", ["number"]
+        command "open", ["number"]
     }
 
     preferences {
@@ -84,6 +87,10 @@ def uninstalled() {
 def open() {
     def runTime = presetRunTime ?: device.latestValue('preset_runtime') ?: 10
     parent.sendRequest('open', parent.getOrbitDeviceIdFromDNI(device.deviceNetworkId), device.latestValue('station'), runTime)
+}
+
+def open(duration) {
+    parent.sendRequest('open', parent.getOrbitDeviceIdFromDNI(device.deviceNetworkId), device.latestValue('station'), duration)
 }
 
 def close() {
@@ -159,6 +166,8 @@ def parse(String message) {
             def dev = parent.getDeviceByIdAndStation(payload.device_id, payload.current_station)
             if (dev) {
                 dev.sendEvent(name: "last_watering_volume", value: 0, unit: "gal")
+                dev.sendEvent(name: "start_time", value: now())
+                dev.sendEvent(name: "stop_time", value: now()+((payload.run_time+1)*60*1000))
                 synchronized (wateringLock) {
                     dev.sendEvent(name: "valve", value: "open")
                     for (valveDevice in parent.getValveDevices(payload.device_id)) {
@@ -188,6 +197,8 @@ def parse(String message) {
                 synchronized (wateringLock) {  
                     for (d in dev) {
                         if (d.hasCapability("Valve")) 
+                            if (d.currentValue("valve") == "open")
+                                d.sendEvent(name: "stop_time", value: now())
                             d.sendEvent(name: "valve", value: "closed")
                     }
                 }
