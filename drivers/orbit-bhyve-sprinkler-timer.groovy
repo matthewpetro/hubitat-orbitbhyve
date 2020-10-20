@@ -1,7 +1,7 @@
 /*
 *  Name:    Orbit B•Hyve™ Sprinler Timer
-*  Author: Kurt Sanders & Dominick Meglio
-*  Email:    Kurt@KurtSanders.com
+*  Author:  Kurt Sanders & Dominick Meglio
+*  Email:   Kurt@KurtSanders.com
 *  Date:    3/2019
 *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
 *  in compliance with the License. You may obtain a copy of the License at:
