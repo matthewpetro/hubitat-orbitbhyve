@@ -97,18 +97,15 @@ close()
 def open() {
     def runTime = presetRunTime ?: device.latestValue('preset_runtime') ?: 10
     parent.sendRequest('open', parent.getOrbitDeviceIdFromDNI(device.deviceNetworkId), device.latestValue('station'), runTime)
-    sendEvent(name: "switch", value: "on")
 }
 
 def open(duration) {
     parent.sendRequest('open', parent.getOrbitDeviceIdFromDNI(device.deviceNetworkId), device.latestValue('station'), duration)
-    sendEvent(name: "switch", value: "on")
 }
 
 def close() {
     def runTime = presetRunTime ?: device.latestValue('preset_runtime') ?: 10
     parent.sendRequest('close', parent.getOrbitDeviceIdFromDNI(device.deviceNetworkId), device.latestValue('station'), runTime)
-    sendEvent(name: "switch", value: "off")
 }
 
 def setRainDelay(hours) {
