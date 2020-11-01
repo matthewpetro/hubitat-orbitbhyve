@@ -247,12 +247,14 @@ def updateTiles(data) {
                                     if (valveDevice.currentValue("valve") != "open") {
                                         debugVerbose "Opening station ${deviceStationId}"
                                         valveDevice.sendEvent(name:"valve", value: "open")
+                                        valveDevice.sendEvent(name:"switch", value: "on")
                                     }
                                 }
                                 else {
                                     if (valveDevice.currentValue("valve") !="closed") {
                                         debugVerbose "Closed station ${deviceStationId}"
                                         valveDevice.sendEvent(name:"valve", value: "closed")
+                                        valveDevice.sendEvent(name:"switch", value: "off")
                                     }
                                 }
                             }
@@ -264,12 +266,14 @@ def updateTiles(data) {
                                     if (valveDevice.currentValue("valve") != "open") {
                                         debugVerbose "Opening station ${deviceStationId}"
                                         valveDevice.sendEvent(name:"valve", value: "open")
+                                        valveDevice.sendEvent(name:"switch", value: "on")
                                     }
                                 }
                                 else {
                                     if (valveDevice.currentValue("valve") != "closed") {
                                         debugVerbose "Closed station ${deviceStationId}"
                                         valveDevice.sendEvent(name:"valve", value: "closed")
+                                        valveDevice.sendEvent(name:"switch", value: "off")
                                     }
                                 }
                             }
@@ -280,6 +284,7 @@ def updateTiles(data) {
                         getValveDevices(it.id).each {
                             if (it.currentValue("valve") != "closed")
                                 it.sendEvent(name:"valve", value: "closed") 
+                                it.sendEvent(name:"switch", value: "off") 
                         }
                     }
                     

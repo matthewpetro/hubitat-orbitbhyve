@@ -1,8 +1,8 @@
 /*
-*  Name:	Orbit B•Hyve™ Sprinler Timer
-*  Author: Kurt Sanders & Dominick Meglio
-*  Email:	Kurt@KurtSanders.com
-*  Date:	3/2019
+*  Name:    Orbit B•Hyve™ Sprinler Timer
+*  Author:  Kurt Sanders & Dominick Meglio
+*  Email:   Kurt@KurtSanders.com
+*  Date:    3/2019
 *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
 *  in compliance with the License. You may obtain a copy of the License at:
 *
@@ -33,6 +33,7 @@ metadata {
         capability "Battery"
         capability "Valve"
         capability "Initialize"
+        capability "Switch"
 
         attribute "is_connected", "bool"
         attribute "manual_preset_runtime_min", "number"
@@ -70,6 +71,7 @@ def installed() {
     state.retryCount = 0
     state.nextRetry = 0
     sendEvent(name: "valve", value: "closed")
+    sendEvent(name: "switch", value: "off")
 }
 
 def uninstalled() {
@@ -82,6 +84,14 @@ def uninstalled() {
             
         }
     }
+}
+
+def on() {
+open()
+}
+
+def off() {
+close()
 }
 
 def open() {
@@ -170,10 +180,12 @@ def parse(String message) {
                 dev.sendEvent(name: "stop_time", value: now()+((payload.run_time+1)*60*1000))
                 synchronized (wateringLock) {
                     dev.sendEvent(name: "valve", value: "open")
+                    dev.sendEvent(name: "switch", value: "on")
                     for (valveDevice in parent.getValveDevices(payload.device_id)) {
                         if (valveDevice.deviceNetworkId != dev.deviceNetworkId && valveDevice.currentValue("valve") == "open") {
                             parent.debugVerbose "Closing ${valveDevice.deviceNetworkId} because station ${payload.current_station} opened"
                             valveDevice.sendEvent(name: "valve", value: "closed")
+                            valveDevice.sendEvent(name: "switch", value: "off")
                         }
                     }
                 }
@@ -200,6 +212,7 @@ def parse(String message) {
                             if (d.currentValue("valve") == "open")
                                 d.sendEvent(name: "stop_time", value: now())
                             d.sendEvent(name: "valve", value: "closed")
+                            d.sendEvent(name: "switch", value: "off")
                     }
                 }
                 parent.refreshLastWateringAmount(payload.device_id)
